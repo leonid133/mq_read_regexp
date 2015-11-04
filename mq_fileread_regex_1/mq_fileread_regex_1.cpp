@@ -1,44 +1,42 @@
 // mq_fileread_regex_1.cpp : Defines the entry point for the console application.
-//
 
 #include "stdafx.h"
 #include "clogr.h"
 
-#define TEST_BYTE 52428800//50 Мб файл 
+//#define TEST_BYTE 52428800//50 Мб файл 
+
 //#define m_max_byte_file_size 1048576
- 
-const TCHAR szFileName[100] = {L"testfile.txt"};
- 
+ /*
+
 void WriteF();
 void ReadFSynh();
 void ReadFAsynh();
 static int Count;
  
 HANDLE hFile;
-
+*/
 
 int _tmain(int argc, _TCHAR* argv[])
 {
-  
+    size_t buf_result_size = 255;
+    const char filter[] = "ЗАКРЫВАШ*";
+    const TCHAR szFileName[100] = {L"testfile.txt"};
+
     CLogReader regexp_reader;
     regexp_reader.Open(szFileName);
-	/*regexp_reader.Open(szFileName);
-    char* filter = new char[100];
+    
     regexp_reader.SetFilter(filter);
-    regexp_reader.Close();
-    */
-   /*
-   setlocale(LC_CTYPE, "Russian");
-        printf("Создаём файл!\n");
-    WriteF();
-        printf("\nСчитываем файл в асинхронном режиме!\n");
-    ReadFAsynh();
-        printf("\nСчитываем файл в синхронном режиме!\n");
-    ReadFSynh();*/
-        
+    char* buf = new char[buf_result_size];
+    for(int it_buf = 0; it_buf < buf_result_size; ++it_buf)
+        buf[it_buf] = '\r\n';
+    while(regexp_reader.GetNextLine(buf, buf_result_size-1))
+        printf( "%s \n", buf );
+    
+    _getch();
+	
     return 0;
 }
-
+/*
 void ReadFAsynh()
 {       
     DWORD maxBuff=0;
@@ -96,10 +94,7 @@ while(read&&maxBuff!=0)
     }
 CloseHandle(hFile); 
 DWORD beg2 = GetTickCount()-beg1; //определяем время считывания файла
- /* if(error1 == 997)
-            printf("ERROR_IO_PENDIN - Асинхронная операция ввода / вывода в процессе.\n");
-        else
-            printf("Не все данные считаны. Ошибка - %d\n",error1);*/
+
 printf("\nФайл в синхронном режиме считан за %d мс\n",beg2);
 VirtualFree(VirtMem,0,MEM_RELEASE);
 _getch();
@@ -127,4 +122,4 @@ void WriteF()
     DWORD beg2 = GetTickCount()-beg1; //определяем время считывания файла
   
 printf("\nФайл в синхронном режиме записан за %d мс\n",beg2);
-}
+}*/

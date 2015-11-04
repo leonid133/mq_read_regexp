@@ -6,13 +6,15 @@ class CLogReader
   {
 private:
       HANDLE    m_h_file_;
-      LPVOID    m_virt_mem_;
-      LPVOID     m_virt_work_;
-      DWORD     m_virt_buff_;
+      
+      LPVOID    m_virt_work_;
+       DWORD    m_virt_buff_size;
+       DWORD    m_file_size;
       
 unsigned int    m_max_byte_file_size;
  const char*    m_filter;
-   
+      size_t    m_size_filter;
+
   void    Close();                         // закрытие файла
 
 public:
