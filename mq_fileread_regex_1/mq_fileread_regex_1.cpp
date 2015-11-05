@@ -3,6 +3,7 @@
 #include "stdafx.h"
 #include "clogr.h"
 
+
 //#define TEST_BYTE 52428800//50 Мб файл 
 
 //#define m_max_byte_file_size 1048576
@@ -18,20 +19,44 @@ HANDLE hFile;
 
 int _tmain(int argc, _TCHAR* argv[])
 {
-    size_t buf_result_size = 255;
-    const char filter[] = "ЗАКРЫВАШ*";
+    setlocale(LC_CTYPE, "Russian");
+    /*
+    if(argc != 2 && argc != 3) 
+    {
+        std::cerr << "Пример использования параметров: " << argv[0] << " РегулярноеВыражение [Файл]" << "\r\n";
+		return 1;
+	}
+
+    if(argc == 3) 
+    {
+		std::cerr << argv[0] << ": Can't open " << argv[2] << "\r\n";
+		return 1;
+    }
+    else
+        std::cerr << argv[0] << ": " << argv[1]<< ": " << argv[2] << "\r\n";
+     _getch();*/
+    
+     size_t buf_result_size = 255;
+    const char filter[] = "ОЛГА*";
     const TCHAR szFileName[100] = {L"testfile.txt"};
 
     CLogReader regexp_reader;
+    DWORD tick1_ = GetTickCount();
     regexp_reader.Open(szFileName);
-    
+    DWORD tick2_ = GetTickCount();
+
     regexp_reader.SetFilter(filter);
     char* buf = new char[buf_result_size];
-    for(int it_buf = 0; it_buf < buf_result_size; ++it_buf)
-        buf[it_buf] = '\r\n';
+    /*for(int it_buf = 0; it_buf < buf_result_size; ++it_buf)
+        buf[it_buf] = '\n';
+    */
     while(regexp_reader.GetNextLine(buf, buf_result_size-1))
         printf( "%s \n", buf );
-    
+    DWORD tick3_ = GetTickCount();
+    printf("\nФайл считан за %d мс\n",tick2_-tick1_);
+    printf("\nПоиск произведен за %d мс\n",tick3_-tick2_);
+    printf( "\nФильтр поиска %s \n", filter );
+
     _getch();
 	
     return 0;
