@@ -1,6 +1,37 @@
+/*
+Тестовое задание. Чтение файла и регулярка. Леонид Блохин
+Использованная литература:
+WinApi 
+ReadFile
+1. http://www.cyberforum.ru/win-api/thread1361909.html
+
+2. http://zetblog.ru/programming/200902/winapi-%D1%80%D0%B0%D0%B1%D0%BE%D1%82%D0%B0-%D1%81-%D1%84%D0%B0%D0%B9%D0%BB%D0%B0%D0%BC%D0%B8-%D0%BE%D1%81%D0%BD%D0%BE%D0%B2%D0%BD%D1%8B%D0%B5-%D1%84%D1%83%D0%BD%D0%BA%D1%86%D0%B8%D0%B8/
+
+Исследовал вопрос скорости по тикам, понял, что ассинхронное чтение быстрее, заюзал его. Пощитал размер файлов в 100Мб не значительным, и засунул все в память. 
+Можно читать блоками во время обработки регулярки, прирост скорости возможен, если важно как можно быстрее получить первый ответ по совпадению. 
+
+Regexp 
+http://www.codeproject.com/Articles/798/Fast-regular-expressions
+
+2. http://rus-linux.net/nlib.php?name=/MyLDP/algol/cpattern/Regular_Expressions_in_C_ru.html
+
+3. http://rutracker.org/forum/viewtopic.php?t=3539489
+
+4. http://www.softpanorama.org/Algorithms/pattern_matching.shtml
+
+5. http://rutracker.org/forum/viewtopic.php?t=4294269 Роберт Седжвик
+
+6. http://www.tldp.org/LDP/LG/issue27/mueller.html
+
+По регуляркам Sedgewick предложил очень хороший алгоритм, он его очень долго вылизывал, мне понравился, я его заюзал. 
+Пробовал сколхозить автомат сам, он по скорости проиграл, долго это, и тянет на кандидатскую.
+
+*/
+
 #pragma once
 #include <tchar.h>
 #include <windef.h>
+
 
 #define MAXSTATES	100
 // error codes of RegExpr::search and RegExpr::searchLen
@@ -20,55 +51,9 @@ unsigned int    m_max_byte_file_size;
  const char*    m_filter;
       size_t    m_size_filter;
 
+unsigned int    m_line_counter;
   //Sedgewick RegExp 
-         int    m_line_counter;
-         
-         struct State
-         {
-	         char the_char;
-	         unsigned next1;
-             unsigned next2;
-         } automaton[MAXSTATES];
-
-        void    clear_automaton();
-        void    compile(const char *pattern);
-	     //int    search(const char *str, unsigned start = 0);
-	     int    searchLen(const char *str, unsigned start = 0); 
-         //const char *operator = (const char *pattern);
-
-                class Deque
-                {
-	                public:
-		                Deque();
-		                ~Deque();
-
-		                void push(int n);
-		                void put(int n);
-		                int pop();
-
-		                int isEmpty();
-
-	                protected:
-		                struct Element 
-                        {
-			                int n;
-			                Element *next;
-		                } *head, *tail;
-                } deque;
-
-      // compiler
-		unsigned    m_j;
-        unsigned    m_state;
-		const char *m_p;
-
-		unsigned    list();
-		unsigned    element();
-		unsigned    v();
-
-		     int    isLetter(char c);
-
-		// automaton simulation
-		int simulate(const char *str, int j);
+        
 
 public:
            CLogReader();
@@ -80,72 +65,3 @@ public:
                        const int bufsize);  // buf - буфер, bufsize - максимальная длина
                                             // false - конец файла или ошибка
   };
-/*
-class NFA
-{
-private:
-    char* re; // match transitions
-	Digraph G; // epsilon transition digraph
-	int M; // number of states
-public:	
-    NFA(const char* regexp, const int lenght)
-	{
-		M = lenght;
-		re = regexp;
-		G = buildEpsilonTransitionsDigraph();
-	}
-	bool recognizes(const char* txt)
-	{ 
-		Bag<Integer> pc = new Bag<Integer>();
-		DirectedDFS dfs = new DirectedDFS(G, 0);
-		for (int v = 0; v < G.V(); v++)
-		if (dfs.marked(v)) pc.add(v);
-			for (int i = 0; i < txt.length(); i++)
-			{
-				Bag<Integer> match = new Bag<Integer>();
-				for (int v : pc)
-				{
-					if (v == M) continue;
-						if ((re[v] == txt.charAt(i)) || re[v] == '.')
-							match.add(v+1);
-				}
-				dfs = new DirectedDFS(G, match);
-				pc = new Bag<Integer>();
-				for (int v = 0; v < G.V(); v++)
-					if (dfs.marked(v)) pc.add(v);
-			}
-			for (int v : pc)
-				if (v == M) return true;
-			return false; 
-	}
-	Digraph buildEpsilonTransitionDigraph()
-	{ 
-		Digraph G = new Digraph(M+1);
-		Stack<Integer> ops = new Stack<Integer>();
-		for (int i = 0; i < M; i++) 
-		{
-			int lp = i;
-			if (re[i] == '(' || re[i] == '|') 
-				ops.push(i);
-			else if (re[i] == ')')
-			{
-				int or = ops.pop();
-				if (re[or] == '|') 
-				{
-					lp = ops.pop();
-					G.addEdge(lp, or+1);
-					G.addEdge(or, i);
-				}
-				else lp = or;
-			}
-			if (i < M-1 && re[i+1] == '*') 
-			{
-				G.addEdge(lp, i+1);
-				G.addEdge(i+1, lp);
-			}
-			if (re[i] == '(' || re[i] == '*' || re[i] == ')')
-			G.addEdge(i, i+1);
-		}
-		return G;
-	}
-};*/

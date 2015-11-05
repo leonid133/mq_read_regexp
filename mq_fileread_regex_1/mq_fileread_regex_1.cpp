@@ -36,8 +36,8 @@ int _tmain(int argc, _TCHAR* argv[])
         std::cerr << argv[0] << ": " << argv[1]<< ": " << argv[2] << "\r\n";
      _getch();*/
     
-     size_t buf_result_size = 150;
-    const char filter[] = "ÁÎË*ÀÐ";
+    unsigned int buf_result_size = 150;
+    const char filter[] = ".*ÃÀËÈÌÓËËÈÍ.*";
     const TCHAR szFileName[100] = {L"testfile.txt"};
 
     CLogReader regexp_reader;
@@ -51,7 +51,7 @@ int _tmain(int argc, _TCHAR* argv[])
         buf[it_buf] = '\n';
     */
     int find_counter = 0;
-    while(regexp_reader.GetNextLine(buf, buf_result_size-1))
+    while(regexp_reader.GetNextLine(buf, (buf_result_size)))
     {
         DWORD tick_print_start_ = GetTickCount();
         printf( "%s \n", buf );
