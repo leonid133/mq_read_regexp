@@ -36,8 +36,8 @@ int _tmain(int argc, _TCHAR* argv[])
         std::cerr << argv[0] << ": " << argv[1]<< ": " << argv[2] << "\r\n";
      _getch();*/
     
-     size_t buf_result_size = 255;
-    const char filter[] = "ОЛГА*";
+     size_t buf_result_size = 150;
+    const char filter[] = "БОЛ*АР";
     const TCHAR szFileName[100] = {L"testfile.txt"};
 
     CLogReader regexp_reader;
@@ -50,12 +50,20 @@ int _tmain(int argc, _TCHAR* argv[])
     /*for(int it_buf = 0; it_buf < buf_result_size; ++it_buf)
         buf[it_buf] = '\n';
     */
+    int find_counter = 0;
     while(regexp_reader.GetNextLine(buf, buf_result_size-1))
+    {
+        DWORD tick_print_start_ = GetTickCount();
         printf( "%s \n", buf );
+        DWORD tick_print_end_ = GetTickCount();
+        find_counter++;
+        tick2_ = tick2_ + (tick_print_end_ - tick_print_start_);
+    }
     DWORD tick3_ = GetTickCount();
     printf("\nФайл считан за %d мс\n",tick2_-tick1_);
     printf("\nПоиск произведен за %d мс\n",tick3_-tick2_);
     printf( "\nФильтр поиска %s \n", filter );
+    printf("\nНайдено %d строчек\n", find_counter);
 
     _getch();
 	

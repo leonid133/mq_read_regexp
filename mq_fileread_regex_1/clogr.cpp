@@ -85,7 +85,7 @@ bool CLogReader::GetNextLine(char* buf, const int bufsize)
    // CopyMemory(buf , buf_work_text, bufsize);
     char* buf_null = new char[bufsize];
     for(int it_buf = 0; it_buf < bufsize; ++it_buf)
-            buf_null[it_buf] = '\n';
+            buf_null[it_buf] = ' ';
 
 	while(m_line_counter < m_file_size) 
     {
@@ -193,30 +193,30 @@ inline int CLogReader::isLetter(char c)
 
 void CLogReader::compile(const char *pattern)
 {
-   	p = pattern;
+   	m_p = pattern;
 
-	state = 0;
-	j = 0;
+	m_state = 0;
+	m_j = 0;
 
 	clear_automaton();
 	int n = list();
 	if(automaton[0].next1 == 0)
 		automaton[0].next1 = automaton[0].next2 = n;
-	automaton[state].next1 = automaton[state].next2 = 0;
+	automaton[m_state].next1 = automaton[m_state].next2 = 0;
 
 }
 
 unsigned CLogReader::list()
 {
-	unsigned s1 = state++;
+	unsigned s1 = m_state++;
     unsigned s2 = element();
     unsigned s3;
-	if(p[j] == '|'){
-		j++;
-		s3 = ++state;
+	if(m_p[m_j] == '|'){
+		m_j++;
+		s3 = ++m_state;
 		automaton[s3].next1 = s2;
 		automaton[s3].next2 = list();
-		automaton[s3-1].next1 = automaton[s3-1].next2 = state;
+		automaton[s3-1].next1 = automaton[s3-1].next2 = m_state;
 		if(automaton[s1].next1 == s2 || automaton[s1].next1 == 0)
 			automaton[s1].next1 = s3;
 		if(automaton[s1].next2 == s2 || automaton[s1].next2 == 0)
@@ -228,16 +228,16 @@ unsigned CLogReader::list()
 
 unsigned CLogReader::element()
 {
-	unsigned s1 = state;
+	unsigned s1 = m_state;
     unsigned s2 = 0;
 
-	    if(p[j] == '('){
-		    j++;
+	    if(m_p[m_j] == '('){
+		    m_j++;
 		    s2 = list();
-		    if(p[j] == ')') {
-			    automaton[state].next1 = automaton[state].next2 = state+1;
-			    state++;
-			    j++;
+		    if(m_p[m_j] == ')') {
+			    automaton[m_state].next1 = automaton[m_state].next2 = m_state+1;
+			    m_state++;
+			    m_j++;
 		    } else{}
 	    } 
         else
@@ -245,24 +245,29 @@ unsigned CLogReader::element()
 		    s2 = v();
         }
 
-	    if(p[j] == '*') {
-		    automaton[state].next1 = s2;
-       	    automaton[state].next2 = state+1;
-		    s1 = state;
-		    if(automaton[s2-1].next1 == s2 || automaton[s2-1].next1 == 0)
-			    automaton[s2-1].next1 = state;
-       	    if(automaton[s2-1].next2 == s2 || automaton[s2-1].next2 == 0)
-	       	    automaton[s2-1].next2 = state;
-		    state++;
-   		    j++;
-	    } else {
+	    if(m_p[m_j] == '*') 
+        {
+            automaton[m_state].the_char = '*';
+		    automaton[m_state].next1 = s2;
+       	    automaton[m_state].next2 = m_state+1;
+		    s1 = m_state;
+            
+		    if(automaton[s2].next1 == s2 || automaton[s2].next1 == 0)
+			    automaton[s2].next1 = m_state;
+       	    if(automaton[s2].next2 == s2 || automaton[s2].next2 == 0)
+	       	    automaton[s2].next2 = m_state;
+		    m_state++;
+   		    m_j++;
+	    } 
+        else 
+        {
        	    if(automaton[s1-1].next1 == 0)
 	       	    automaton[s1-1].next1 = s2;
        	    if(automaton[s1-1].next2 == 0)
 	       	    automaton[s1-1].next2 = s2;
 	    }
 
-	    if(p[j] != '|' && p[j] != ')' && p[j] != '*' && p[j] != '\0')
+	    if(m_p[m_j] != '|' && m_p[m_j] != ')' && m_p[m_j] != '*' && m_p[m_j] != '\0')
 		    s1 = element();
 
 	return s1;
@@ -270,25 +275,27 @@ unsigned CLogReader::element()
 
 unsigned CLogReader::v()
 {
-	unsigned s1 = state;
+	unsigned s1 = m_state;
 	char *s;
 
-	if(p[j] == '\\' )
-		j++;
-	else if(!isLetter(p[j]))
+	if(m_p[m_j] == '\\' )
+		m_j++;
+	else if(!isLetter(m_p[m_j]))
     {
         clear_automaton();
-        j++;
+        m_j++;
         s1 = element();
+        return s1;
     }
 
-	automaton[state].the_char = p[j++];
-	automaton[state].next1 = automaton[state].next2 = state+1;
-	state++;
+	automaton[m_state].the_char = m_p[m_j++];
+	automaton[m_state].next1 = automaton[m_state].next2 = m_state+1;
+	m_state++;
 	return s1;
 }
 
 // automaton simulation
+#define next_char	-1
 int CLogReader::searchLen(const char *str, unsigned start)
 {
 	if(automaton[0].next1 == 0 && automaton[0].next2 == 0)
@@ -298,55 +305,85 @@ int CLogReader::searchLen(const char *str, unsigned start)
     int m;
     int slen;
     n = m = slen = strlen(str);
-    /*
-	for(n = start;n < slen;n++){
-		m = simulate(str, 0);
-		if(m < (n-1) && m > -1) 
+   
+    
+
+	for(n = start;n < slen;n++)
+    {
+		m_state = automaton[0].next1;
+	    if(automaton[0].next1 != automaton[0].next2)
+		    deque.push(automaton[0].next2);
+	    deque.put(-1);
+        m = simulate(str, n);
+		if(m < (n-1)) 
         {
 			return n;
 		}
-	}*/
-    m = simulate(str, 0);
-	if(m < (slen-1) && m > -1) 
-    {
-		return n;
+        else if(m == -2)
+            return REGEXPR_NOT_FOUND;
 	}
+    
 	return REGEXPR_NOT_FOUND;
 }
-
+#undef next_char
 #define next_char	-1
-int CLogReader::simulate(const char *str, int j)
+int CLogReader::simulate(const char *str, int j )
 {
-	int state = automaton[0].next1,
-		 last_match = j - 1,
-		 len = strlen(str);
+	int last_match = j - 1;
+	size_t len = strlen(str);
 
-	if(automaton[0].next1 != automaton[0].next2)
-		deque.push(automaton[0].next2);
-	deque.put(next_char);
 	do {
-		if(state == next_char) 
+		if(m_state == next_char) 
         {
 			if(str[j])
 				j++;
 			deque.put(next_char);
 		} 
-        else if(automaton[state].the_char == str[j]) 
+        else if(automaton[m_state].the_char == str[j]) 
         {
-			deque.put(automaton[state].next1);
-			if(automaton[state].next1 != automaton[state].next2)
-				deque.put(automaton[state].next2);
+			deque.put(automaton[m_state].next1);
+			if(automaton[m_state].next1 != automaton[m_state].next2)
+				deque.put(automaton[m_state].next2);
 		} 
-        else if(!automaton[state].the_char) 
+       /* else if(!automaton[m_state].the_char) 
         {
-			deque.push(automaton[state].next1);
-			if(automaton[state].next1 != automaton[state].next2)
-				deque.push(automaton[state].next2);
-		}
-		state = deque.pop();
-		if(state == 0) {
-			last_match = j - 1;
-			state = deque.pop();
+			deque.push(automaton[m_state].next1);
+			if(automaton[m_state].next1 != automaton[m_state].next2)
+				deque.push(automaton[m_state].next2);
+		}*/
+        else if(automaton[m_state].the_char == '*')
+        {
+            //deque.push(automaton[m_state].next1);
+			if(automaton[m_state].next1 != automaton[m_state].next2)
+			{
+                int saved_state = automaton[m_state].next2;;
+                for(int n = j; n < (len-j);n++)
+                {
+                    m_state = saved_state;
+                    deque.put(automaton[saved_state].next2);
+                    deque.put(automaton[saved_state].next2);
+                    deque.put(-1);
+                    int m = simulate(str, n);
+                    if(m < (n-1)) 
+                    {
+			            return n;
+		            }
+                }
+                return -2;
+            }
+        
+        }
+        else if(automaton[m_state].the_char == '?')
+        {
+            deque.put(automaton[m_state].next1);
+			if(automaton[m_state].next1 != automaton[m_state].next2)
+				deque.put(automaton[m_state].next2);
+        }
+		m_state = deque.pop();
+		if(m_state == 0) {
+			last_match = j - 2;
+			m_state = deque.pop();
+            last_match = last_match - m_state;
 		}
 	} while(j <= len && !deque.isEmpty());
 
