@@ -211,7 +211,8 @@ unsigned CLogReader::list()
 	unsigned s1 = m_state++;
     unsigned s2 = element();
     unsigned s3;
-	if(m_p[m_j] == '|'){
+	if(m_p[m_j] == '|')
+    {
 		m_j++;
 		s3 = ++m_state;
 		automaton[s3].next1 = s2;
@@ -282,10 +283,13 @@ unsigned CLogReader::v()
 		m_j++;
 	else if(!isLetter(m_p[m_j]))
     {
-        clear_automaton();
-        m_j++;
-        s1 = element();
-        return s1;
+        //clear_automaton();
+        while(m_p[m_j] && !isLetter(m_p[m_j]))
+        {
+            ++m_j;
+        }
+        //s1 = element();
+        //return s1;
     }
 
 	automaton[m_state].the_char = m_p[m_j++];
@@ -295,7 +299,6 @@ unsigned CLogReader::v()
 }
 
 // automaton simulation
-#define next_char	-1
 int CLogReader::searchLen(const char *str, unsigned start)
 {
 	if(automaton[0].next1 == 0 && automaton[0].next2 == 0)
@@ -314,8 +317,10 @@ int CLogReader::searchLen(const char *str, unsigned start)
 	    if(automaton[0].next1 != automaton[0].next2)
 		    deque.push(automaton[0].next2);
 	    deque.put(-1);
-        m = simulate(str, n);
-		if(m < (n-1)) 
+        bool match_b;
+        m = simulate(str, n, match_b);
+		//if(m < (n-1) || match_b) 
+        if(match_b) 
         {
 			return n;
 		}
@@ -325,13 +330,13 @@ int CLogReader::searchLen(const char *str, unsigned start)
     
 	return REGEXPR_NOT_FOUND;
 }
-#undef next_char
+
 #define next_char	-1
-int CLogReader::simulate(const char *str, int j )
+int CLogReader::simulate(const char *str, int j, bool &match_b )
 {
 	int last_match = j - 1;
 	size_t len = strlen(str);
-
+    match_b = false;
 	do {
 		if(m_state == next_char) 
         {
@@ -339,7 +344,7 @@ int CLogReader::simulate(const char *str, int j )
 				j++;
 			deque.put(next_char);
 		} 
-        else if(automaton[m_state].the_char == str[j]) 
+        else if(automaton[m_state].the_char == str[j] || automaton[m_state].the_char == '?') 
         {
 			deque.put(automaton[m_state].next1);
 			if(automaton[m_state].next1 != automaton[m_state].next2)
@@ -381,9 +386,10 @@ int CLogReader::simulate(const char *str, int j )
         }*/
 		m_state = deque.pop();
 		if(m_state == 0) {
-			last_match = j - 2;
+			last_match = j - 1;
 			m_state = deque.pop();
             last_match = last_match - m_state;
+            match_b = true;
 		}
 	} while(j <= len && !deque.isEmpty());
 
