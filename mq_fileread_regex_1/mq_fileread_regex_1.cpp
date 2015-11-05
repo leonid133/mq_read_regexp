@@ -37,7 +37,7 @@ int _tmain(int argc, _TCHAR* argv[])
      _getch();*/
     
      size_t buf_result_size = 150;
-    const char filter[] = "¡ŒÀ*¿–";
+    const char filter[] = "ŒÀ√¿–*";
     const TCHAR szFileName[100] = {L"testfile.txt"};
 
     CLogReader regexp_reader;

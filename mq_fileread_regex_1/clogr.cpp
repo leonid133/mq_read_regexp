@@ -247,7 +247,7 @@ unsigned CLogReader::element()
 
 	    if(m_p[m_j] == '*') 
         {
-            automaton[m_state].the_char = '*';
+            //automaton[m_state].the_char = '*';
 		    automaton[m_state].next1 = s2;
        	    automaton[m_state].next2 = m_state+1;
 		    s1 = m_state;
@@ -345,13 +345,13 @@ int CLogReader::simulate(const char *str, int j )
 			if(automaton[m_state].next1 != automaton[m_state].next2)
 				deque.put(automaton[m_state].next2);
 		} 
-       /* else if(!automaton[m_state].the_char) 
+        else if(!automaton[m_state].the_char) 
         {
 			deque.push(automaton[m_state].next1);
 			if(automaton[m_state].next1 != automaton[m_state].next2)
 				deque.push(automaton[m_state].next2);
-		}*/
-        else if(automaton[m_state].the_char == '*')
+		}
+       /* else if(automaton[m_state].the_char == '*')
         {
             //deque.push(automaton[m_state].next1);
 			if(automaton[m_state].next1 != automaton[m_state].next2)
@@ -378,7 +378,7 @@ int CLogReader::simulate(const char *str, int j )
             deque.put(automaton[m_state].next1);
 			if(automaton[m_state].next1 != automaton[m_state].next2)
 				deque.put(automaton[m_state].next2);
-        }
+        }*/
 		m_state = deque.pop();
 		if(m_state == 0) {
 			last_match = j - 2;
