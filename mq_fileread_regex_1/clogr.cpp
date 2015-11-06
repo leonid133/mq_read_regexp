@@ -22,38 +22,10 @@ CLogReader::~CLogReader()
 
 bool CLogReader::Open( const TCHAR szFileName[100] )
 {
-    OVERLAPPED ov = {0,0,0,0,NULL};
+    
     m_h_file_ = CreateFile(szFileName, GENERIC_READ, 0 ,NULL, OPEN_EXISTING, FILE_FLAG_OVERLAPPED|FILE_FLAG_NO_BUFFERING, NULL);
     if(m_h_file_ == INVALID_HANDLE_VALUE)
             return false; 
-    m_file_size = GetFileSize(m_h_file_, NULL);
-   
-    m_virt_work_ = VirtualAlloc(NULL,m_file_size,MEM_COMMIT,PAGE_READWRITE);
-    if(m_virt_work_ == NULL)
-        return false;
-        
-    LPVOID virt_mem_buf = VirtualAlloc(NULL,m_virt_buff_size,MEM_COMMIT,PAGE_READWRITE);
-    if(virt_mem_buf == NULL)
-        return false;
-    
-    while(ov.Offset < m_file_size)
-    {
-        ReadFile(m_h_file_,(LPVOID)virt_mem_buf, m_virt_buff_size,NULL, &ov);
-        DWORD error = GetLastError();      
-        WaitForSingleObject(m_h_file_,INFINITE);   
-        
-        char* charBuffer = reinterpret_cast<char*>(m_virt_work_);
-        CopyMemory(charBuffer + ov.Offset , virt_mem_buf, m_virt_buff_size);
-
-        ov.Offset += m_virt_buff_size;
-        if(error == ERROR_HANDLE_EOF)
-            break;
-        else if(error == ERROR_IO_PENDING)
-            ;
-        else if(error == ERROR_ACCESS_DENIED || error == ERROR_FILE_CORRUPT || error == ERROR_FILE_INVALID || error == ERROR_FILE_NOT_FOUND)
-            return false;
-    }   
-    VirtualFree(virt_mem_buf,0,MEM_RELEASE);
     
     return true;
 }
@@ -80,18 +52,50 @@ bool CLogReader::SetFilter(const char* filter)
 
 bool CLogReader::GetNextLine(char* buf, const int bufsize)
 {
-    char* buf_work_text =  reinterpret_cast<char*>(m_virt_work_);
-    
+   
    // CopyMemory(buf , buf_work_text, bufsize);
     char* buf_null = new char[bufsize];
     for(int it_buf = 0; it_buf < bufsize; ++it_buf)
-            buf_null[it_buf] = ' ';
+            buf_null[it_buf] = '\0';
+    
+    OVERLAPPED ov = {0,0,0,0,NULL};
+
+    LPVOID virt_mem_buf = VirtualAlloc(NULL,m_virt_buff_size,MEM_COMMIT,PAGE_READWRITE);
+    if(virt_mem_buf == NULL)
+        return false;
+    
+    m_file_size = GetFileSize(m_h_file_, NULL);
+   
+    m_virt_work_ = VirtualAlloc(NULL,m_file_size,MEM_COMMIT,PAGE_READWRITE);
+    if(m_virt_work_ == NULL)
+        return false;
+
+    char* buf_work_text =  reinterpret_cast<char*>(m_virt_work_);
+    
+    while(ov.Offset < m_file_size)
+    {
+        ReadFile(m_h_file_,(LPVOID)virt_mem_buf, m_virt_buff_size,NULL, &ov);
+        DWORD error = GetLastError();      
+        WaitForSingleObject(m_h_file_,INFINITE);   
+        
+        char* charBuffer = reinterpret_cast<char*>(m_virt_work_);
+        CopyMemory(charBuffer + ov.Offset , virt_mem_buf, m_virt_buff_size);
+
+        ov.Offset += m_virt_buff_size;
+        if(error == ERROR_HANDLE_EOF)
+            break;
+        else if(error == ERROR_IO_PENDING)
+            ;
+        else if(error == ERROR_ACCESS_DENIED || error == ERROR_FILE_CORRUPT || error == ERROR_FILE_INVALID || error == ERROR_FILE_NOT_FOUND)
+            return false;
+    }   
+    VirtualFree(virt_mem_buf,0,MEM_RELEASE);
 
 	while(m_line_counter < m_file_size) 
     {
         
         int bufsize_ln = 0;
-		for( bufsize_ln = 1; bufsize_ln < bufsize; ++bufsize_ln)
+		for( bufsize_ln = 1; bufsize_ln < (bufsize-1); ++bufsize_ln)
 		{
             if(buf_work_text[bufsize_ln + m_line_counter] == '\n')
                 break;

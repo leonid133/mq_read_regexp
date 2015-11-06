@@ -49,7 +49,7 @@ int _tmain(int argc, _TCHAR* argv[])
         tick2_ = tick2_ + (tick_print_end_ - tick_print_start_);
     }
     DWORD tick3_ = GetTickCount();
-    printf("\nФайл считан за %d мс\n",tick2_-tick1_);
+    printf("\nФайл открыт за %d мс\n",tick2_-tick1_);
     printf("\nПоиск произведен за %d мс\n",tick3_-tick2_);
     printf( "\nФильтр поиска %s \n", filter );
     printf("\nНайдено %d строчек\n", find_counter);
