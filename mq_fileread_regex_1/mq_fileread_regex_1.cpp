@@ -6,32 +6,44 @@
 int _tmain(int argc, _TCHAR* argv[])
 {
     setlocale(LC_CTYPE, "Russian");
-    /*
-    if(argc != 2 && argc != 3) 
-    {
-        std::cerr << "Пример использования параметров: " << argv[0] << " РегулярноеВыражение [Файл]" << "\r\n";
-		return 1;
-	}
+
+    char *filter;
+    filter = new char[100];
+
+    TCHAR *szFileName;
+    szFileName = new TCHAR[100];
 
     if(argc == 3) 
     {
-		std::cerr << argv[0] << ": Can't open " << argv[2] << "\r\n";
-		return 1;
+        szFileName = argv[1];
+        
+        int filter_len  = _tcslen( argv[2]);
+        filter = new char[filter_len+1];
+        WideCharToMultiByte(CP_ACP, 0, argv[2], -1, filter, filter_len, NULL, NULL);
+        filter[filter_len] = '\0';
     }
     else
-        std::cerr << argv[0] << ": " << argv[1]<< ": " << argv[2] << "\r\n";
-     _getch();*/
-    
+    {
+        szFileName = L"testfile.txt";
+        //const char filter[] = "*ОЛГАР*";
+        
+        filter = "**ОЛГ?Р**";
+        //const char filter[] = " ?????? ";
+        // const char filter[] = "БОЛГАР";
+    }
+    printf("Будет произведен поиск %s в файле ", filter);
+    _tcprintf( szFileName );
+    printf(". Для продолжения нажмите любую клавишу\n");
+    _getch();
     int buf_result_size = 150;
-    //const char filter[] = "*ОЛГАР*";
-     const char filter[] = "**ОЛГ?Р**";
-      //const char filter[] = " ?????? ";
-    // const char filter[] = "БОЛГАР";
-    const TCHAR szFileName[100] = {L"testfile.txt"};
-
+   
     CLogReader regexp_reader;
     DWORD tick1_ = GetTickCount();
-    regexp_reader.Open(szFileName);
+    if(!regexp_reader.Open(szFileName))
+    {
+        std::cerr << "Не удалось открыть файл " << szFileName;
+        return 1;
+    }
     DWORD tick2_ = GetTickCount();
 
     regexp_reader.SetFilter(filter);

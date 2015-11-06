@@ -16,7 +16,7 @@ CLogReader::CLogReader()
 
 
 
-    m_buf_null = new char[(m_virt_buff_size*2)];
+    m_buf_null = new char[(m_virt_buff_size*2)+1];
     for(int it_buf = 0; it_buf < (m_virt_buff_size*2); ++it_buf)
             m_buf_null[it_buf] = '\0';
 }
@@ -62,7 +62,7 @@ bool CLogReader::SetFilter(const char* filter)
         return false;
     
     m_size_filter = sizeof(filter) / sizeof(filter[0]);
-    m_filter = new char[m_size_filter];
+    m_filter = new char[m_size_filter+1];
     m_filter = filter;
     
     //Sedgewick RegExp 
