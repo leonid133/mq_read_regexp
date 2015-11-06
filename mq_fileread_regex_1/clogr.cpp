@@ -13,11 +13,18 @@ CLogReader::CLogReader()
     m_line_counter = 0;
     automaton[0].next1 = 0;
 	automaton[0].next2 = 0;
+
+
+
+    m_buf_null = new char[(m_virt_buff_size*2)];
+    for(int it_buf = 0; it_buf < (m_virt_buff_size*2); ++it_buf)
+            m_buf_null[it_buf] = '\0';
 }
 
 CLogReader::~CLogReader()
 {
-    VirtualFree(m_virt_work_,0,MEM_RELEASE);
+   VirtualFree(m_read_mem_buf,0,MEM_RELEASE);
+   VirtualFree(m_work_mem_buf,0,MEM_RELEASE);
 }
 
 bool CLogReader::Open( const TCHAR szFileName[100] )
@@ -26,7 +33,21 @@ bool CLogReader::Open( const TCHAR szFileName[100] )
     m_h_file_ = CreateFile(szFileName, GENERIC_READ, 0 ,NULL, OPEN_EXISTING, FILE_FLAG_OVERLAPPED|FILE_FLAG_NO_BUFFERING, NULL);
     if(m_h_file_ == INVALID_HANDLE_VALUE)
             return false; 
+    m_file_size = GetFileSize(m_h_file_, NULL);
+    m_line_counter = 0;
+    m_it_read_counter = 0;
+
+    m_read_mem_buf = VirtualAlloc(NULL,m_virt_buff_size,MEM_COMMIT,PAGE_READWRITE);
+    if(m_read_mem_buf == NULL)
+        return false;
     
+    m_work_mem_buf = VirtualAlloc(NULL,(m_virt_buff_size*2),MEM_COMMIT,PAGE_READWRITE);
+    if(m_work_mem_buf == NULL)
+        return false;
+
+    char* buf_work_text = reinterpret_cast<char*>(m_work_mem_buf);
+    CopyMemory(buf_work_text , m_buf_null, (m_virt_buff_size*2));
+
     return true;
 }
 
@@ -52,66 +73,61 @@ bool CLogReader::SetFilter(const char* filter)
 
 bool CLogReader::GetNextLine(char* buf, const int bufsize)
 {
-   
-   // CopyMemory(buf , buf_work_text, bufsize);
-    char* buf_null = new char[bufsize];
-    for(int it_buf = 0; it_buf < bufsize; ++it_buf)
-            buf_null[it_buf] = '\0';
-    
     OVERLAPPED ov = {0,0,0,0,NULL};
 
-    LPVOID virt_mem_buf = VirtualAlloc(NULL,m_virt_buff_size,MEM_COMMIT,PAGE_READWRITE);
-    if(virt_mem_buf == NULL)
-        return false;
+    char* buf_work_text = reinterpret_cast<char*>(m_work_mem_buf);
     
-    m_file_size = GetFileSize(m_h_file_, NULL);
-   
-    m_virt_work_ = VirtualAlloc(NULL,m_file_size,MEM_COMMIT,PAGE_READWRITE);
-    if(m_virt_work_ == NULL)
-        return false;
+    ov.Offset = m_line_counter;
 
-    char* buf_work_text =  reinterpret_cast<char*>(m_virt_work_);
-    
     while(ov.Offset < m_file_size)
     {
-        ReadFile(m_h_file_,(LPVOID)virt_mem_buf, m_virt_buff_size,NULL, &ov);
-        DWORD error = GetLastError();      
-        WaitForSingleObject(m_h_file_,INFINITE);   
+        if(m_it_read_counter >= m_virt_buff_size || m_it_read_counter == 0 )
+        {
+            ReadFile(m_h_file_,(LPVOID)m_read_mem_buf, m_virt_buff_size,NULL, &ov);
+            DWORD error = GetLastError();      
+            WaitForSingleObject(m_h_file_,INFINITE);   
         
-        char* charBuffer = reinterpret_cast<char*>(m_virt_work_);
-        CopyMemory(charBuffer + ov.Offset , virt_mem_buf, m_virt_buff_size);
-
-        ov.Offset += m_virt_buff_size;
-        if(error == ERROR_HANDLE_EOF)
-            break;
-        else if(error == ERROR_IO_PENDING)
-            ;
-        else if(error == ERROR_ACCESS_DENIED || error == ERROR_FILE_CORRUPT || error == ERROR_FILE_INVALID || error == ERROR_FILE_NOT_FOUND)
-            return false;
-    }   
-    VirtualFree(virt_mem_buf,0,MEM_RELEASE);
-
-	while(m_line_counter < m_file_size) 
-    {
+            if(error == ERROR_HANDLE_EOF)
+                break;
+            else if(error == ERROR_IO_PENDING)
+                ;
+            else if(error == ERROR_ACCESS_DENIED || error == ERROR_FILE_CORRUPT || error == ERROR_FILE_INVALID || error == ERROR_FILE_NOT_FOUND)
+                return false;
+             CopyMemory(buf_work_text + m_virt_buff_size, m_read_mem_buf, m_virt_buff_size);
+             ov.Offset += m_virt_buff_size;
+             m_line_counter = ov.Offset;
+             m_it_read_counter = 0;
+        }
         
         int bufsize_ln = 0;
-		for( bufsize_ln = 1; bufsize_ln < (bufsize-1); ++bufsize_ln)
+        bool not_ended_line = false;
+        
+        while(m_it_read_counter <m_virt_buff_size || (m_it_read_counter<(m_virt_buff_size*2) && not_ended_line) )    
 		{
-            if(buf_work_text[bufsize_ln + m_line_counter] == '\n')
-                break;
-		}
-        CopyMemory(buf , buf_null, bufsize);
-        CopyMemory(buf , buf_work_text + m_line_counter, bufsize_ln);
-        m_line_counter +=bufsize_ln;	
-        /*
-        CopyMemory(buf , buf_null, bufsize);
-        CopyMemory(buf , buf_work_text + m_line_counter, bufsize);
-        m_line_counter +=bufsize;
-        */
-		int n = searchLen(buf);
-	    if(n >= 0)
-		    return true;
-    }
+            for( bufsize_ln = 1; (bufsize_ln < (bufsize-1)) && (bufsize_ln < m_virt_buff_size*2); ++bufsize_ln)
+		    {
+                if(buf_work_text[bufsize_ln + m_it_read_counter] == '\n' || buf_work_text[bufsize_ln + m_it_read_counter] == '\0')
+                {
+                    not_ended_line = false;
+                    break;
+                }
+                else
+                   not_ended_line = true; 
+		    }
+        
+            CopyMemory(buf , m_buf_null, bufsize);
+            CopyMemory(buf , buf_work_text + m_it_read_counter, bufsize_ln);
+        
+            m_it_read_counter += bufsize_ln;
+
+		    int n = searchLen(buf);
+	        if(n >= 0)
+		        return true;
+        }
+        CopyMemory(buf_work_text, m_read_mem_buf, m_virt_buff_size);
+        m_it_read_counter = 0;
+    }   
+     
     return false;
 }
 

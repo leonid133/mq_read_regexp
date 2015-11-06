@@ -11,12 +11,16 @@ class CLogReader
   {
 private:
       HANDLE    m_h_file_;
+      LPVOID    m_read_mem_buf;
+      LPVOID    m_work_mem_buf;
       
-      LPVOID    m_virt_work_;
        DWORD    m_virt_buff_size;
        DWORD    m_file_size;
-      
+unsigned int    m_it_read_counter;
+       
+       char*    m_buf_null;      
 unsigned int    m_max_byte_file_size;
+
  const char*    m_filter;
       size_t    m_size_filter;
 

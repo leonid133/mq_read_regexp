@@ -22,7 +22,7 @@ int _tmain(int argc, _TCHAR* argv[])
         std::cerr << argv[0] << ": " << argv[1]<< ": " << argv[2] << "\r\n";
      _getch();*/
     
-     size_t buf_result_size = 150;
+    int buf_result_size = 150;
     //const char filter[] = "*ОЛГАР*";
      const char filter[] = "**ОЛГ?Р**";
       //const char filter[] = " ?????? ";
@@ -49,6 +49,8 @@ int _tmain(int argc, _TCHAR* argv[])
         tick2_ = tick2_ + (tick_print_end_ - tick_print_start_);
     }
     DWORD tick3_ = GetTickCount();
+    regexp_reader.Close();
+
     printf("\nФайл открыт за %d мс\n",tick2_-tick1_);
     printf("\nПоиск произведен за %d мс\n",tick3_-tick2_);
     printf( "\nФильтр поиска %s \n", filter );
