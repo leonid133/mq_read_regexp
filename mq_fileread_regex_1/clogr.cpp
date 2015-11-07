@@ -70,6 +70,25 @@ bool CLogReader::SetFilter( const char* filter )
     return true;
 }
 
+bool CLogReader::ReadFileNextBuf( OVERLAPPED* ov)
+{
+    ReadFile( m_h_file_, (LPVOID)m_read_mem_buf, m_virt_buff_size, NULL, ov);
+    DWORD error = GetLastError();      
+    WaitForSingleObject( m_h_file_, INFINITE );   
+        
+    if( error == ERROR_HANDLE_EOF )
+        ;
+    else if( error == ERROR_IO_PENDING )
+        ;
+    else if( error == ERROR_ACCESS_DENIED 
+            || error == ERROR_FILE_CORRUPT 
+            || error == ERROR_FILE_INVALID 
+            || error == ERROR_FILE_NOT_FOUND )
+        return false;
+
+    return true;
+}
+
 bool CLogReader::GetNextLine( char* buf, const int bufsize )
 {
     OVERLAPPED ov = { 0, 0, 0, 0, NULL};
@@ -85,32 +104,22 @@ bool CLogReader::GetNextLine( char* buf, const int bufsize )
            || 0 == m_it_read_counter )
            && ov.Offset < m_file_size )
         {
-            ReadFile( m_h_file_, (LPVOID)m_read_mem_buf, m_virt_buff_size, NULL, &ov);
-            DWORD error = GetLastError();      
-            WaitForSingleObject( m_h_file_, INFINITE );   
-        
-            if( error == ERROR_HANDLE_EOF )
-                break;
-            else if( error == ERROR_IO_PENDING )
-                ;
-            else if( error == ERROR_ACCESS_DENIED 
-                  || error == ERROR_FILE_CORRUPT 
-                  || error == ERROR_FILE_INVALID 
-                  || error == ERROR_FILE_NOT_FOUND )
+            if( !ReadFileNextBuf( &ov ) )
+            {
                 return false;
-
-             CopyMemory( ( buf_work_text + m_virt_buff_size ), m_read_mem_buf, m_virt_buff_size );
-             ov.Offset += m_virt_buff_size;
-             m_line_counter = ov.Offset;
-             m_it_read_counter = 0;
+            }
+            CopyMemory( ( buf_work_text + m_virt_buff_size ), m_read_mem_buf, m_virt_buff_size );
+            ov.Offset += m_virt_buff_size;
+            m_line_counter = ov.Offset;
+            m_it_read_counter = 0;
         }
         
         int bufsize_line = 0;
         bool not_ended_line = false;
         
         while( m_it_read_counter < m_virt_buff_size 
-           ||( m_it_read_counter < ( m_virt_buff_size*2 ) && not_ended_line )
-           ||((m_line_counter > m_file_size)&&(m_it_read_counter < ( m_virt_buff_size*2 ))) )  
+           ||( m_it_read_counter < ( m_virt_buff_size*2 ) && ( not_ended_line || (m_line_counter > m_file_size) ) ) )
+           //||((m_line_counter > m_file_size)&&(m_it_read_counter < ( m_virt_buff_size*2 ))) )  
 		{
             
             for( bufsize_line = 0; ( bufsize_line < (bufsize-1) ) && ( bufsize_line < ( m_virt_buff_size*2 ) ); bufsize_line )
@@ -127,7 +136,7 @@ bool CLogReader::GetNextLine( char* buf, const int bufsize )
                    not_ended_line = true; 
                 ++bufsize_line;
 		    }
-/*        if(bufsize_line>1)
+         /*  if(bufsize_line>1)
                 printf("debug");*/
             CopyMemory( buf , m_buf_null, bufsize );
             CopyMemory( buf , ( buf_work_text + m_it_read_counter ), bufsize_line );
@@ -223,6 +232,7 @@ inline int CLogReader::isLetter( char input_char )
           && input_char != '(' 
           && input_char != ')' 
           && input_char != '*' 
+          && input_char != '+' 
           && input_char != '\\' 
           && input_char != '\0' 
           ? 1 : 0 );
@@ -236,10 +246,10 @@ void CLogReader::compile( const char *regex )
 	m_regex_char_counter = 0;
 
 	clear_aut_state();
-	int n = list();
+	n_match = list();
 	if( aut_state[0].next1 == 0 )
     {
-		aut_state[0].next1 = aut_state[0].next2 = n;
+		aut_state[0].next1 = aut_state[0].next2 = n_match;
     }
 
 	aut_state[m_state_counter].next1 = aut_state[m_state_counter].next2 = 0;
@@ -296,17 +306,36 @@ unsigned CLogReader::element()
         
 	    if( m_regex_pattenn[m_regex_char_counter] == '*' ) 
         {
+            aut_state[m_state_counter].char_state = '*';
             aut_state[m_state_counter].next1 = state_2;
        	    aut_state[m_state_counter].next2 = m_state_counter+1;
-		    state_1 = m_state_counter;
+		    state_2 = m_state_counter;
             
-		    if( aut_state[state_2].next1 == state_2 || aut_state[state_2].next1 == 0 )
+		    if( aut_state[state_2 - 1].next1 == state_2 || aut_state[state_2 - 1].next1 == 0 )
 			{
-                aut_state[state_2].next1 = m_state_counter;
+                aut_state[state_2 - 1].next1 = m_state_counter;
             }
-       	    if( aut_state[state_2].next2 == state_2 || aut_state[state_2].next2 == 0 )
+       	    if( aut_state[state_2 - 1].next2 == state_2 || aut_state[state_2 - 1].next2 == 0 )
 	       	{
-                 aut_state[state_2].next2 = m_state_counter;
+                 aut_state[state_2 - 1].next2 = m_state_counter;
+            }
+		    m_state_counter++;
+   		    m_regex_char_counter++;
+	    } 
+        else if( m_regex_pattenn[m_regex_char_counter] == '+' ) 
+        {
+            aut_state[m_state_counter].char_state = '+';
+            aut_state[m_state_counter].next1 = state_2;
+       	    aut_state[m_state_counter].next2 = m_state_counter+1;
+		    state_2 = m_state_counter;
+            
+		    if( aut_state[state_2 - 1].next1 == state_2 || aut_state[state_2 - 1].next1 == 0 )
+			{
+                aut_state[state_2 - 1].next1 = m_state_counter;
+            }
+       	    if( aut_state[state_2 - 1].next2 == state_2 || aut_state[state_2 - 1].next2 == 0 )
+	       	{
+                 aut_state[state_2 - 1].next2 = m_state_counter;
             }
 		    m_state_counter++;
    		    m_regex_char_counter++;
@@ -322,6 +351,7 @@ unsigned CLogReader::element()
 	    if( m_regex_pattenn[m_regex_char_counter] != '|' 
             &&  m_regex_pattenn[m_regex_char_counter] != ')' 
             && m_regex_pattenn[m_regex_char_counter] != '*' 
+            && m_regex_pattenn[m_regex_char_counter] != '+'
             && m_regex_pattenn[m_regex_char_counter] != '\0' )
 		    state_1 = element();
 
@@ -358,16 +388,11 @@ int CLogReader::SearchInLine( const char *text_line, unsigned start )
 
     int text_char_size;
     text_char_size = strlen( text_line );
-   
+    int last_match  =  0;
     for( int n = start; n < text_char_size; n++ )
     {
-		m_state_counter = aut_state[0].next1;
-	    if( aut_state[0].next1 != aut_state[0].next2 )
-		    deque.push( aut_state[0].next2 );
-	    deque.put(-1);
-        bool match_b;
-        int m = simulate( text_line, n, match_b );
-        if( match_b ) 
+		last_match  = simulate( text_line, n );
+        if( last_match > ( n -1) ) 
         {
 			return n;
 		}
@@ -379,20 +404,34 @@ int CLogReader::SearchInLine( const char *text_line, unsigned start )
 }
 
 #define next_char	-1
-int CLogReader::simulate( const char *str, int j, bool &match_b )
+int CLogReader::simulate( const char *str, int j )
 {
-	int last_match = j - 1;
+	m_state_counter = aut_state[0].next1;
+    //deque.push( aut_state[0].next1 );
+	if( aut_state[0].next1 != aut_state[0].next2 )
+		deque.push( aut_state[0].next2 );
+	
+    deque.put( next_char );
+    
+    int last_match = j - 1;
 	size_t len = strlen( str );
-    match_b = false;
 	do 
     {
 		if( m_state_counter == next_char ) 
         {
 			if(str[j])
 				j++;
+            else
+                break;
 			deque.put(next_char);
 		} 
-        else if( aut_state[m_state_counter].char_state == str[j] || aut_state[m_state_counter].char_state == '?' ) 
+        else if( aut_state[m_state_counter].char_state == str[j] ) 
+        {
+			deque.put( aut_state[m_state_counter].next1 );
+			if( aut_state[m_state_counter].next1 != aut_state[m_state_counter].next2 )
+				deque.put( aut_state[m_state_counter].next2 );
+		} 
+        else if( aut_state[m_state_counter].char_state == '?' ) 
         {
 			deque.put( aut_state[m_state_counter].next1 );
 			if( aut_state[m_state_counter].next1 != aut_state[m_state_counter].next2 )
@@ -403,15 +442,27 @@ int CLogReader::simulate( const char *str, int j, bool &match_b )
 			deque.push( aut_state[m_state_counter].next1 );
 			if( aut_state[m_state_counter].next1 != aut_state[m_state_counter].next2 )
 				deque.push( aut_state[m_state_counter].next2 );
+            //j++;
 		}
-       
+        else if( aut_state[m_state_counter].char_state == '*' ) 
+        {
+			deque.push( aut_state[m_state_counter].next1 );
+			if( aut_state[m_state_counter].next1 != aut_state[m_state_counter].next2 )
+				deque.push( aut_state[m_state_counter].next2 );
+		}
+        else if( aut_state[m_state_counter].char_state == '+' ) 
+        {
+			deque.push( aut_state[m_state_counter].next1 );
+			if( aut_state[m_state_counter].next1 != aut_state[m_state_counter].next2 )
+				deque.push( aut_state[m_state_counter].next2 );
+		}
 		m_state_counter = deque.pop();
 		if( m_state_counter == 0 ) 
         {
 			last_match = j - 1;
 			m_state_counter = deque.pop();
-            last_match = last_match - m_state_counter;
-            match_b = true;
+           // last_match = last_match - m_state_counter;
+            
 		}
 	} 
     while( j <= len && !deque.isEmpty() );

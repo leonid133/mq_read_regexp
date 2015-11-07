@@ -25,6 +25,8 @@ unsigned int    m_max_byte_file_size;
  const char*    m_filter;
       size_t    m_size_filter;
 
+        bool    ReadFileNextBuf( OVERLAPPED* ov);
+
   //Sedgewick RegExp 
          int    m_line_counter;
          
@@ -61,6 +63,7 @@ unsigned int    m_max_byte_file_size;
         } deque;
 
       // compiler
+         int    n_match;
 unsigned int    m_regex_char_counter;
          int    m_state_counter;
   const char    *m_regex_pattenn;
@@ -72,7 +75,7 @@ unsigned int    m_regex_char_counter;
 		 int    isLetter(char c);
 
 		// aut_state simulation
-		 int    simulate(const char *str, int j, bool &match_b);
+		 int    simulate( const char *str, int j );
 
 public:
                 CLogReader();
@@ -84,3 +87,9 @@ public:
                            const int bufsize);  // buf - буфер, bufsize - максимальная длина
                                                 // false - конец файла или ошибка
   };
+/*
+Представление	Число повторений	Эквивалент	Пример	Соответствие
+?	Ноль или одно	{0,1}	colou?r	color, colour
+*	Ноль или более	{0,}	colou*r	color, colour, colouur и т. д.
++	Одно или более	{1,}	colou+r	colour, colouur и т. д. (но не color)
+*/

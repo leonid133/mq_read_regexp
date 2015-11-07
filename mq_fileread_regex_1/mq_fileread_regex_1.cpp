@@ -31,7 +31,12 @@ int _tmain( int argc, _TCHAR* argv[] )
          //filter = "БОЛГАР";
         // filter = "ЗАКРЫВАШКИ";
         //filter = "(*ОЛГ?Р**)|(*ЗАКРЫВАШКИ*)";
-        filter = "ПЕЧЕНЬКА";
+        //filter = "ПЕЧ*НЬКА";
+        //filter = "*ЕЧЕ*Н*К*";
+        // filter = "ПЕЧЕ*НЬКА";
+        // filter = "ПЕЧЕ*Н*ЬКА";
+        //filter = "П?ЧЕ+Н+ЬКА";
+        filter = "П?ЧЕ+Н+ЬКА";
     }
     printf("Будет произведен поиск %s в файле ", filter);
     _tcprintf( szFileName );
@@ -60,7 +65,7 @@ int _tmain( int argc, _TCHAR* argv[] )
     while(regexp_reader.GetNextLine(buf, buf_result_size))
     {
         DWORD tick_print_start_ = GetTickCount();
-        printf( "%s \n", buf );
+        printf( "\n %s \n ", buf );
         DWORD tick_print_end_ = GetTickCount();
         find_counter++;
         tick_start_regex = tick_start_regex + (tick_print_end_ - tick_print_start_);
@@ -68,10 +73,10 @@ int _tmain( int argc, _TCHAR* argv[] )
     DWORD tick_end = GetTickCount();
     regexp_reader.Close();
 
-    printf("\nФайл открыт за %d мс\n",tick_end_open-tick_start_open);
-    printf("\nПоиск произведен за %d мс\n",tick_end-tick_start_regex);
-    printf( "\nФильтр поиска %s \n", filter );
-    printf("\nНайдено %d строчек\n", find_counter);
+    printf( "\nФайл открыт за %d мс\n", tick_end_open-tick_start_open );
+    printf( "\nПоиск произведен за %d мс\n", tick_end-tick_start_regex );
+    printf( "\nРегулярное выражение %s \n", filter );
+    printf( "\nНайдено %d строчек\n", find_counter );
 
     _getch();
 	
