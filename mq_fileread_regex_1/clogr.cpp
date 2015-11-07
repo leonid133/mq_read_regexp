@@ -306,10 +306,12 @@ unsigned CLogReader::element()
         
 	    if( m_regex_pattenn[m_regex_char_counter] == '*' ) 
         {
+
+            
             aut_state[m_state_counter].char_state = '*';
             aut_state[m_state_counter].next1 = state_2;
        	    aut_state[m_state_counter].next2 = m_state_counter+1;
-		    state_2 = m_state_counter;
+		    state_1 = m_state_counter;
             
 		    if( aut_state[state_2 - 1].next1 == state_2 || aut_state[state_2 - 1].next1 == 0 )
 			{
@@ -419,13 +421,15 @@ int CLogReader::simulate( const char *str, int j )
     {
 		if( m_state_counter == next_char ) 
         {
-			if(str[j])
-				j++;
-            else
-                break;
-			deque.put(next_char);
+                deque.put(next_char);
+                if(str[j])
+				    j++;
+                else
+                    break;
+            
 		} 
-        else if( aut_state[m_state_counter].char_state == str[j] ) 
+
+        if( aut_state[m_state_counter].char_state == str[j] ) 
         {
 			deque.put( aut_state[m_state_counter].next1 );
 			if( aut_state[m_state_counter].next1 != aut_state[m_state_counter].next2 )
@@ -436,19 +440,23 @@ int CLogReader::simulate( const char *str, int j )
 			deque.put( aut_state[m_state_counter].next1 );
 			if( aut_state[m_state_counter].next1 != aut_state[m_state_counter].next2 )
 				deque.put( aut_state[m_state_counter].next2 );
+            
 		} 
         else if( !aut_state[m_state_counter].char_state ) 
         {
 			deque.push( aut_state[m_state_counter].next1 );
 			if( aut_state[m_state_counter].next1 != aut_state[m_state_counter].next2 )
 				deque.push( aut_state[m_state_counter].next2 );
-            //j++;
 		}
         else if( aut_state[m_state_counter].char_state == '*' ) 
         {
 			deque.push( aut_state[m_state_counter].next1 );
+            deque.push( aut_state[m_state_counter].next1 );
 			if( aut_state[m_state_counter].next1 != aut_state[m_state_counter].next2 )
+            {
 				deque.push( aut_state[m_state_counter].next2 );
+            }
+            
 		}
         else if( aut_state[m_state_counter].char_state == '+' ) 
         {
@@ -456,7 +464,10 @@ int CLogReader::simulate( const char *str, int j )
 			if( aut_state[m_state_counter].next1 != aut_state[m_state_counter].next2 )
 				deque.push( aut_state[m_state_counter].next2 );
 		}
+
+        
 		m_state_counter = deque.pop();
+        
 		if( m_state_counter == 0 ) 
         {
 			last_match = j - 1;

@@ -28,15 +28,16 @@ int _tmain( int argc, _TCHAR* argv[] )
         //filter = "**ÎËÃ?Ğ**";
         // filter = "*ÎËÃÀĞ*";
         // filter = " ?????? ";
-         //filter = "ÁÎËÃÀĞ";
+        //filter = "ÁÎËÃÀĞ";
         // filter = "ÇÀÊĞÛÂÀØÊÈ";
         //filter = "(*ÎËÃ?Ğ**)|(*ÇÀÊĞÛÂÀØÊÈ*)";
         //filter = "ÏÅ×*ÍÜÊÀ";
         //filter = "*Å×Å*Í*Ê*";
-        // filter = "ÏÅ×Å*ÍÜÊÀ";
-        // filter = "ÏÅ×Å*Í*ÜÊÀ";
+         filter = "ÏÅ×Å*ÍÜÊÀ";
+        //filter = "Ï?×Å*ÍÜ**ÊÀ";
         //filter = "Ï?×Å+Í+ÜÊÀ";
-        filter = "Ï?×Å+Í+ÜÊÀ";
+        //filter = "Ï?×Å+Í+ÜÊÀ";
+         // filter = "ÏÅ*×ÅÍÜÊÀ";
     }
     printf("Áóäåò ïğîèçâåäåí ïîèñê %s â ôàéëå ", filter);
     _tcprintf( szFileName );
