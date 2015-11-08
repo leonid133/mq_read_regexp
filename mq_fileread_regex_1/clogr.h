@@ -53,6 +53,7 @@ unsigned int    m_max_byte_file_size;
 		        int pop();
 
 		        int isEmpty();
+                void Clean();
 
 	        protected:
 		        struct Element 
@@ -60,7 +61,7 @@ unsigned int    m_max_byte_file_size;
 			        int n;
 			        Element *next;
 		        } *head, *tail;
-        } deque;
+        } m_deque;
 
       // compiler
          int    n_match;
@@ -89,7 +90,10 @@ public:
   };
 /*
 Представление	Число повторений	Эквивалент	Пример	Соответствие
+.* - последовательность любых символов неограниченной длины;
+. - один любой символ;
 ?	Ноль или одно	{0,1}	colou?r	color, colour
 *	Ноль или более	{0,}	colou*r	color, colour, colouur и т. д.
 +	Одно или более	{1,}	colou+r	colour, colouur и т. д. (но не color)
+(ОТК|ЗАК)РЫВАШКИ
 */

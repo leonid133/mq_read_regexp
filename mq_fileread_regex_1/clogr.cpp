@@ -218,6 +218,12 @@ inline int CLogReader::Deque::isEmpty()
 	return head ? 0 : 1;
 }
 
+void CLogReader::Deque::Clean()
+{
+    while( !isEmpty())
+        pop();
+}
+
 // RegExpr
 
 
@@ -315,7 +321,7 @@ unsigned CLogReader::element()
 		    state_2 = v();
         }
         
-	    if( m_regex_pattenn[m_regex_char_counter] == '*' ) 
+        if( m_regex_pattenn[m_regex_char_counter] == '*' ) 
         {
             aut_state[m_state_counter].char_state = '*';
             aut_state[m_state_counter].next1 = state_2;
@@ -375,7 +381,7 @@ unsigned CLogReader::element()
 
 	    if( m_regex_pattenn[m_regex_char_counter] != '|' 
             &&  m_regex_pattenn[m_regex_char_counter] != ')' 
-            && m_regex_pattenn[m_regex_char_counter] != '*' 
+            && m_regex_pattenn[m_regex_char_counter] != '*'
             && m_regex_pattenn[m_regex_char_counter] != '+'
             && m_regex_pattenn[m_regex_char_counter] != '\0' )
 		    state_1 = element();
@@ -415,7 +421,9 @@ int CLogReader::SearchInLine( const char *text_line, unsigned start )
     int last_match  =  0;
     for( int n = start; n < text_char_size; n++ )
     {
-		last_match  = simulate( text_line, n );
+		if( aut_state[1].char_state == '.' && aut_state[2].char_state == '*' && n > 0)
+            break; //если в начале любое количество любых символов, нет смысла проходить и искать вхождение 
+        last_match  = simulate( text_line, n );
         if( last_match > ( n -1 ) ) 
         {
 			return n;
@@ -430,11 +438,12 @@ int CLogReader::SearchInLine( const char *text_line, unsigned start )
 #define next_char	-1
 int CLogReader::simulate( const char *str, int j )
 {
-	m_state_counter = aut_state[0].next1;
+	m_deque.Clean();
+    m_state_counter = aut_state[0].next1;
 	if( aut_state[0].next1 != aut_state[0].next2 )
-		deque.push( aut_state[0].next2 );
+		m_deque.push( aut_state[0].next2 );
 	
-    deque.put( next_char );
+    m_deque.put( next_char );
     
     int last_match = j - 1;
 	size_t len = strlen( str );
@@ -442,55 +451,78 @@ int CLogReader::simulate( const char *str, int j )
     {
 		if( m_state_counter == next_char ) 
         {
-                deque.put(next_char);
-                if(str[j])
+                m_deque.put(next_char);
+                if(str[j] && j < len)
 				    j++;
                 else
+                {
+                    m_deque.Clean();
                     break;
+                }
             
 		} 
 
-        if( aut_state[m_state_counter].char_state == str[j] ) 
+        if( m_state_counter>(MAXSTATES-1) )
         {
-			deque.put( aut_state[m_state_counter].next1 );
+            //printf("");
+            m_deque.Clean();
+            break; 
+        }
+        if( aut_state[m_state_counter].char_state == '.' ) 
+        {
+			m_deque.put( aut_state[m_state_counter].next1 );
 			if( aut_state[m_state_counter].next1 != aut_state[m_state_counter].next2 )
-				deque.put( aut_state[m_state_counter].next2 );
+				m_deque.put( aut_state[m_state_counter].next2 );
+            /*
+            if( m_state_counter == 1 && aut_state[m_state_counter+1].char_state == '*' && last_match > 1 )
+            {
+                m_deque.Clean();
+                break; //бессмысленные проходы 
+            }*/
 		} 
         else if( !aut_state[m_state_counter].char_state ) 
         {
-			deque.push( aut_state[m_state_counter].next1 );
+			m_deque.push( aut_state[m_state_counter].next1 );
 			if( aut_state[m_state_counter].next1 != aut_state[m_state_counter].next2 )
             {
-				deque.push( aut_state[m_state_counter].next2 );
+				m_deque.push( aut_state[m_state_counter].next2 );
             }
 		}
         else if( aut_state[m_state_counter].char_state == '*' ) 
         {
-            deque.push( aut_state[m_state_counter].next1 );
+            m_deque.push( aut_state[m_state_counter].next1 );
 			if( aut_state[m_state_counter].next1 != aut_state[m_state_counter].next2 )
             {
-				deque.push( aut_state[m_state_counter].next2 );
+				m_deque.push( aut_state[m_state_counter].next2 );
             }
 		}
         else if( aut_state[m_state_counter].char_state == '+' ) 
         {
-			deque.push( aut_state[m_state_counter].next1 );
+			m_deque.push( aut_state[m_state_counter].next1 );
 			if( aut_state[m_state_counter].next1 != aut_state[m_state_counter].next2 )
             {
-				deque.push( aut_state[m_state_counter].next2 );
+				m_deque.push( aut_state[m_state_counter].next2 );
             }
 		}
+        else if( aut_state[m_state_counter].char_state == str[j] ) 
+        {
+			m_deque.put( aut_state[m_state_counter].next1 );
+			if( aut_state[m_state_counter].next1 != aut_state[m_state_counter].next2 )
+				m_deque.put( aut_state[m_state_counter].next2 );
+		} 
 
-		m_state_counter = deque.pop();
+		m_state_counter = m_deque.pop();
         
 		if( m_state_counter == 0 ) 
         {
 			last_match = j - 1;
-			m_state_counter = deque.pop();
+			/*while( !m_deque.isEmpty())
+                m_state_counter = m_deque.pop();*/
+             m_deque.Clean();
 		}
 	} 
-    while( j <= len && !deque.isEmpty() );
-
+    while( j <= len && !m_deque.isEmpty() );
+   
 	return last_match;
 }
 #undef next_char
