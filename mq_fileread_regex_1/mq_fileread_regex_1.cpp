@@ -33,7 +33,9 @@ int _tmain( int argc, _TCHAR* argv[] )
         //filter = "(*нкц?п**)|(*гюйпшбюьйх*)";
         //filter = "оев*мэйю";
         //filter = "*еве*м*й*";
-         filter = "оеве*мэйю";
+        //filter = "оеве*мэйю";
+        // filter = "оеве+мэйю";
+         filter = "оеве?мэйю";
         //filter = "о?ве*мэ**йю";
         //filter = "о?ве+м+эйю";
         //filter = "о?ве+м+эйю";

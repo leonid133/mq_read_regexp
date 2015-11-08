@@ -306,11 +306,9 @@ unsigned CLogReader::element()
         
 	    if( m_regex_pattenn[m_regex_char_counter] == '*' ) 
         {
-
-            
             aut_state[m_state_counter].char_state = '*';
             aut_state[m_state_counter].next1 = state_2;
-       	    aut_state[m_state_counter].next2 = m_state_counter+1;
+       	    aut_state[m_state_counter].next2 = m_state_counter + 1;
 		    state_1 = m_state_counter;
             
 		    if( aut_state[state_2 - 1].next1 == state_2 || aut_state[state_2 - 1].next1 == 0 )
@@ -328,7 +326,7 @@ unsigned CLogReader::element()
         {
             aut_state[m_state_counter].char_state = '+';
             aut_state[m_state_counter].next1 = state_2;
-       	    aut_state[m_state_counter].next2 = m_state_counter+1;
+       	    aut_state[m_state_counter].next2 = m_state_counter + 1;
 		    state_2 = m_state_counter;
             
 		    if( aut_state[state_2 - 1].next1 == state_2 || aut_state[state_2 - 1].next1 == 0 )
@@ -342,6 +340,17 @@ unsigned CLogReader::element()
 		    m_state_counter++;
    		    m_regex_char_counter++;
 	    } 
+        else if( m_regex_pattenn[m_regex_char_counter] == '?' ) 
+        {
+            state_1 = m_state_counter;
+           
+       	    if( aut_state[state_2 - 1].next2 == state_2 || aut_state[state_2 - 1].next2 == 0 )
+	       	{
+                 aut_state[state_2 - 1].next2 = m_state_counter;
+            }
+		   
+   		    m_regex_char_counter++;
+	    } 
         else 
         {
        	    if( aut_state[state_1-1].next1 == 0 )
@@ -353,6 +362,7 @@ unsigned CLogReader::element()
 	    if( m_regex_pattenn[m_regex_char_counter] != '|' 
             &&  m_regex_pattenn[m_regex_char_counter] != ')' 
             && m_regex_pattenn[m_regex_char_counter] != '*' 
+            //&& m_regex_pattenn[m_regex_char_counter] != '?'
             && m_regex_pattenn[m_regex_char_counter] != '+'
             && m_regex_pattenn[m_regex_char_counter] != '\0' )
 		    state_1 = element();
@@ -378,7 +388,7 @@ unsigned CLogReader::v()
     }
 
 	aut_state[m_state_counter].char_state = m_regex_pattenn[m_regex_char_counter++];
-	aut_state[m_state_counter].next1 = aut_state[m_state_counter].next2 = m_state_counter+1;
+	aut_state[m_state_counter].next1 = aut_state[m_state_counter].next2 = m_state_counter + 1;
 	m_state_counter++;
 	return state_1;
 }
@@ -394,7 +404,7 @@ int CLogReader::SearchInLine( const char *text_line, unsigned start )
     for( int n = start; n < text_char_size; n++ )
     {
 		last_match  = simulate( text_line, n );
-        if( last_match > ( n -1) ) 
+        if( last_match > ( n -1 ) ) 
         {
 			return n;
 		}
@@ -450,7 +460,6 @@ int CLogReader::simulate( const char *str, int j )
 		}
         else if( aut_state[m_state_counter].char_state == '*' ) 
         {
-			deque.push( aut_state[m_state_counter].next1 );
             deque.push( aut_state[m_state_counter].next1 );
 			if( aut_state[m_state_counter].next1 != aut_state[m_state_counter].next2 )
             {
