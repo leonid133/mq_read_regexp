@@ -9,7 +9,7 @@ CLogReader::CLogReader()
     m_file_size = 0;
     
     m_line_counter = 0;
-    m_buf_null = new char[( m_virt_buff_size*2 )+1];
+    m_buf_null = new char[( m_virt_buff_size*2 ) + 1];
     for( int it_buf = 0; it_buf < ( m_virt_buff_size*2 ); ++it_buf )
     {
         m_buf_null[it_buf] = '\0';  
@@ -119,7 +119,6 @@ bool CLogReader::GetNextLine( char* buf, const int bufsize )
         
         while( m_it_read_counter < m_virt_buff_size 
            ||( m_it_read_counter < ( m_virt_buff_size*2 ) && ( not_ended_line || (m_line_counter > m_file_size) ) ) )
-           //||((m_line_counter > m_file_size)&&(m_it_read_counter < ( m_virt_buff_size*2 ))) )  
 		{
             
             for( bufsize_line = 0; ( bufsize_line < (bufsize-1) ) && ( bufsize_line < ( m_virt_buff_size*2 ) ); bufsize_line )
@@ -136,8 +135,16 @@ bool CLogReader::GetNextLine( char* buf, const int bufsize )
                    not_ended_line = true; 
                 ++bufsize_line;
 		    }
-         /*  if(bufsize_line>1)
-                printf("debug");*/
+            /* //DEBUG
+           if(bufsize_line>1)
+             {
+                //printf("debug %s", m_it_read_counter);
+                char* debug_buf = new char[32];
+                itoa(m_it_read_counter, debug_buf, 10);
+                CopyMemory( buf_work_text + ( m_virt_buff_size*2 ) + 1 , debug_buf , 31 );
+             }
+           */
+                
             CopyMemory( buf , m_buf_null, bufsize );
             CopyMemory( buf , ( buf_work_text + m_it_read_counter ), bufsize_line );
         
@@ -249,9 +256,13 @@ void CLogReader::compile( const char *regex )
 	n_match = list();
 	if( aut_state[0].next1 == 0 )
     {
-		aut_state[0].next1 = aut_state[0].next2 = n_match;
+		aut_state[0].next1 = n_match;
     }
 
+    if( aut_state[0].next2 == 0 )
+    {
+        aut_state[0].next2 = n_match;
+    }
 	aut_state[m_state_counter].next1 = aut_state[m_state_counter].next2 = 0;
 
 }
@@ -343,7 +354,10 @@ unsigned CLogReader::element()
         else if( m_regex_pattenn[m_regex_char_counter] == '?' ) 
         {
             state_1 = m_state_counter;
-           
+            if( aut_state[state_2-1].next1 == 0 )
+            {
+	       	    aut_state[state_2-1].next1 = state_2;
+            }
        	    if( aut_state[state_2 - 1].next2 == state_2 || aut_state[state_2 - 1].next2 == 0 )
 	       	{
                  aut_state[state_2 - 1].next2 = m_state_counter;
@@ -362,7 +376,6 @@ unsigned CLogReader::element()
 	    if( m_regex_pattenn[m_regex_char_counter] != '|' 
             &&  m_regex_pattenn[m_regex_char_counter] != ')' 
             && m_regex_pattenn[m_regex_char_counter] != '*' 
-            //&& m_regex_pattenn[m_regex_char_counter] != '?'
             && m_regex_pattenn[m_regex_char_counter] != '+'
             && m_regex_pattenn[m_regex_char_counter] != '\0' )
 		    state_1 = element();
@@ -378,13 +391,10 @@ unsigned CLogReader::v()
 		m_regex_char_counter++;
 	else if( !isLetter( m_regex_pattenn[m_regex_char_counter] ) )
     {
-        //clear_aut_state();
         while( m_regex_pattenn[m_regex_char_counter] && !isLetter( m_regex_pattenn[m_regex_char_counter] ) )
         {
             ++m_regex_char_counter;
         }
-        //s1 = element();
-        //return s1;
     }
 
 	aut_state[m_state_counter].char_state = m_regex_pattenn[m_regex_char_counter++];
@@ -395,7 +405,9 @@ unsigned CLogReader::v()
 
 int CLogReader::SearchInLine( const char *text_line, unsigned start )
 {
-	if( aut_state[0].next1 == 0 && aut_state[0].next2 == 0 )
+	if(start > 0 )
+        printf("Àãààà");
+    if( aut_state[0].next1 == 0 && aut_state[0].next2 == 0 )
 		return REGEXPR_NOT_COMPILED;
 
     int text_char_size;
@@ -419,7 +431,6 @@ int CLogReader::SearchInLine( const char *text_line, unsigned start )
 int CLogReader::simulate( const char *str, int j )
 {
 	m_state_counter = aut_state[0].next1;
-    //deque.push( aut_state[0].next1 );
 	if( aut_state[0].next1 != aut_state[0].next2 )
 		deque.push( aut_state[0].next2 );
 	
@@ -445,18 +456,13 @@ int CLogReader::simulate( const char *str, int j )
 			if( aut_state[m_state_counter].next1 != aut_state[m_state_counter].next2 )
 				deque.put( aut_state[m_state_counter].next2 );
 		} 
-        else if( aut_state[m_state_counter].char_state == '?' ) 
-        {
-			deque.put( aut_state[m_state_counter].next1 );
-			if( aut_state[m_state_counter].next1 != aut_state[m_state_counter].next2 )
-				deque.put( aut_state[m_state_counter].next2 );
-            
-		} 
         else if( !aut_state[m_state_counter].char_state ) 
         {
 			deque.push( aut_state[m_state_counter].next1 );
 			if( aut_state[m_state_counter].next1 != aut_state[m_state_counter].next2 )
+            {
 				deque.push( aut_state[m_state_counter].next2 );
+            }
 		}
         else if( aut_state[m_state_counter].char_state == '*' ) 
         {
@@ -465,24 +471,22 @@ int CLogReader::simulate( const char *str, int j )
             {
 				deque.push( aut_state[m_state_counter].next2 );
             }
-            
 		}
         else if( aut_state[m_state_counter].char_state == '+' ) 
         {
 			deque.push( aut_state[m_state_counter].next1 );
 			if( aut_state[m_state_counter].next1 != aut_state[m_state_counter].next2 )
+            {
 				deque.push( aut_state[m_state_counter].next2 );
+            }
 		}
 
-        
 		m_state_counter = deque.pop();
         
 		if( m_state_counter == 0 ) 
         {
 			last_match = j - 1;
 			m_state_counter = deque.pop();
-           // last_match = last_match - m_state_counter;
-            
 		}
 	} 
     while( j <= len && !deque.isEmpty() );
