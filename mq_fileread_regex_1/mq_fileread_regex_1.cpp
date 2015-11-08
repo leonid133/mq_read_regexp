@@ -1,125 +1,116 @@
-// mq_fileread_regex_1.cpp : Defines the entry point for the console application.
+// author Блохин Л.Н leonidblohin@gmail.com
 
 #include "stdafx.h"
 #include "clogr.h"
 
-//#define TEST_BYTE 52428800//50 Мб файл 
-
-//#define m_max_byte_file_size 1048576
- /*
-
-void WriteF();
-void ReadFSynh();
-void ReadFAsynh();
-static int Count;
- 
-HANDLE hFile;
-*/
-
-int _tmain(int argc, _TCHAR* argv[])
+int _tmain( int argc, _TCHAR* argv[] )
 {
-    size_t buf_result_size = 255;
-    const char filter[] = "ЗАКРЫВАШ*";
-    const TCHAR szFileName[100] = {L"testfile.txt"};
+    setlocale( LC_CTYPE, "Russian" );
 
+    char *filter;
+    TCHAR *szFileName;
+    szFileName = new TCHAR[100];
+
+    if( 3 == argc ) 
+    {
+        //testfile.txt **ОЛГ?Р**
+        int filename_len  = _tcslen( argv[1] );
+        if(filename_len > 100)
+        {
+            printf( "\nИмя файла слишком большое\n");
+            return 1;
+        }
+        szFileName = argv[1];
+        int filter_len  = _tcslen( argv[2] );
+        if(filter_len > 100)
+        {
+            printf( "\nРегулярное выражение слишком большое\n");
+            return 1;
+        }
+        filter = new char[filter_len+1];
+        WideCharToMultiByte( CP_ACP, 0, argv[2], -1, filter, filter_len, NULL, NULL );
+        filter[filter_len] = '\0';
+    }
+    else
+    {
+        printf( "\nПример: .exe filename.txt regexp\n" );
+        printf( "\n.* - последовательность любых символов неограниченной длины\n" );
+        printf( "\n. - один любой символ\n" );
+        printf( "\n? - Ноль или одно	{0,1}	colou?r	color, colour\n" );
+        printf( "\n* - Ноль или более	{0,}	colou*r	color, colour, colouur и т. д.\n" );
+        printf( "\n+ - Одно или более	{1,}	colou+r	colour, colouur и т. д. (но не color)\n" );
+        printf( "\nИспользуем значения по умолчанию\n" );
+        szFileName = L"testfile.txt";
+        
+        filter = new char[100];
+        //filter = "**ОЛГ?Р**";
+        // filter = "*ОЛГАР*";
+        //filter = "БОЛГАР";
+        // filter = "ЗАКРЫВАШКИ";
+        //filter = "(ОТК|ЗАК)РЫВ*АШКИ";
+        //filter = "ПЕЧ*НЬКА";
+        //filter = "П*ЕЧЕНЬКА";
+       // filter = "*ЕЧЕ*Н*К*";
+        //filter = "ПЕЧЕ*НЬКА";
+        // filter = "ПЕЧЕ+НЬКА";
+        //filter = "П?Е+Ч(Е?|Е+)НЬ*КА";
+        //filter = "П?ЕЧЕНЬ*КА";
+        // filter = "ПЕЧЕНЬ*КА";
+         //filter = "П?ЕЧЕНЬКА";
+         //filter = "ПЕЧЕ?НЬКА";
+        //filter = "П?ЧЕ*НЬ**КА";
+        //filter = "П?ЧЕ+Н+ЬКА";
+        //filter = "П?ЧЕ+Н*ЬКА";
+         // filter = "ПЕ*ЧЕНЬКА";
+        //filter = "КА+ЗАБ?УЛ.*ЬК*А";
+         //filter = "КАЗАБ?ЛЬКА";
+        //filter = "КАЗАБ.ЛЬКА";
+         //filter = "КАЗАБУЛЬК*А";
+        //filter = "КАЗАБУЛ.*ЬКА";
+        filter = "КА*ЗАБУЛ.*ЬКА";
+        // filter = ".*.*КАЗАБУЛЬКА";
+    }
+    printf("Будет произведен поиск %s в файле ", filter);
+    _tcprintf( szFileName );
+    printf(". Для продолжения нажмите любую клавишу\n");
+    _getch();
+    int buf_result_size = 150;
+   
     CLogReader regexp_reader;
-    regexp_reader.Open(szFileName);
-    
-    regexp_reader.SetFilter(filter);
-    char* buf = new char[buf_result_size];
-    for(int it_buf = 0; it_buf < buf_result_size; ++it_buf)
-        buf[it_buf] = '\r\n';
-    while(regexp_reader.GetNextLine(buf, buf_result_size-1))
-        printf( "%s \n", buf );
-    
+    DWORD tick_start_open = GetTickCount();
+    if(!regexp_reader.Open(szFileName))
+    {
+        std::cerr << "Не удалось открыть файл " << szFileName;
+        return 1;
+    }
+    DWORD tick_end_open = GetTickCount();
+    DWORD tick_start_regex = GetTickCount();
+
+    if( !regexp_reader.SetFilter(filter) )
+    {
+        std::cerr << "Не удалось установить фильтр " << filter;
+        return 1;
+    }
+    char* buf = new char[buf_result_size+1];
+ 
+    int find_counter = 0;
+    while(regexp_reader.GetNextLine(buf, buf_result_size))
+    {
+        DWORD tick_print_start_ = GetTickCount();
+        printf( "\n %s \n ", buf );
+        DWORD tick_print_end_ = GetTickCount();
+        find_counter++;
+        tick_start_regex = tick_start_regex + (tick_print_end_ - tick_print_start_);
+    }
+    DWORD tick_end = GetTickCount();
+    regexp_reader.Close();
+
+    printf( "\nФайл открыт за %d мс\n", tick_end_open-tick_start_open );
+    printf( "\nПоиск произведен за %d мс\n", tick_end-tick_start_regex );
+    printf( "\nРегулярное выражение %s \n", filter );
+    printf( "\nНайдено %d строчек\n", find_counter );
+    printf( "\nНажмите любую клавишу, для завершения программы\n");
     _getch();
 	
     return 0;
 }
-/*
-void ReadFAsynh()
-{       
-    DWORD maxBuff=0;
-    DWORD error1,error;
-    LPVOID VirtMem = VirtualAlloc(NULL,512,MEM_COMMIT,PAGE_READWRITE);
- 
-    OVERLAPPED ov = {0,0,0,0,NULL};//структура для задания режима чтения
-    hFile = CreateFile(szFileName, GENERIC_READ, 0 ,NULL, OPEN_EXISTING, FILE_FLAG_OVERLAPPED|FILE_FLAG_NO_BUFFERING, NULL);
-    if(hFile == INVALID_HANDLE_VALUE)
-            return; 
-   DWORD beg1 = GetTickCount();
-   while(ov.Offset<TEST_BYTE)
-{
-   ReadFile(hFile,(LPVOID)VirtMem,512,NULL, &ov);//sizeof(DWORD)
-    //error1 = GetLastError();      
-    WaitForSingleObject(hFile,INFINITE);    
-    ov.Offset += 512;
-}   
- //GetOverlappedResult(m_h_file_, &ov,&maxBuff,TRUE);        
- //error = GetLastError();                        
-    CloseHandle(hFile);
-    //определяем время считывания файла
-    DWORD beg2 = GetTickCount()-beg1; 
-    //if(error1 == 997)
-    //      printf("ERROR_IO_PENDIN - Асинхронная операция ввода / вывода в процессе.\n");
-    //  else
-    //      printf("Не все данные считаны. Ошибка - %d\n",error1);
-    //if(error = 38)
-    //          printf("ERROR_HANDLE_EOF - достигнут конец файла\n",error);
-    printf("\nФайл в асинхронном режиме считан за %d мс\n",beg2);
-    VirtualFree(VirtMem,0,MEM_RELEASE);
-    
-_getch();
-}
- 
-//считывание в синхронном режиме
-void ReadFSynh()
-{
-    //DWORD lpBuff=NULL;
-    DWORD maxBuff=1;
-    BOOL read = true;
-    DWORD error1;
- 
-    LPVOID VirtMem = VirtualAlloc(NULL,512,MEM_COMMIT,PAGE_READWRITE);
- 
-    hFile = CreateFile(szFileName, GENERIC_READ, 0 ,NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL|FILE_FLAG_NO_BUFFERING, NULL);
-    if(hFile == INVALID_HANDLE_VALUE)
-            return;
-DWORD beg1 = GetTickCount(); 
- 
-while(read&&maxBuff!=0)
-    {
-        read = ReadFile(hFile,VirtMem,512,&maxBuff, NULL);
-       //error1 = GetLastError(); 
-    }
-CloseHandle(hFile); 
-DWORD beg2 = GetTickCount()-beg1; //определяем время считывания файла
-
-printf("\nФайл в синхронном режиме считан за %d мс\n",beg2);
-VirtualFree(VirtMem,0,MEM_RELEASE);
-_getch();
-}
-
-void WriteF()
-{
-    DWORD dwTemp;
-    DWORD Rand;
-    
-    Count = 0;
-        printf("Записываем файл!");
-        hFile = CreateFile(szFileName,GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-        if(hFile == INVALID_HANDLE_VALUE)
-            return;
-        DWORD dwFileSize = GetFileSize(hFile, NULL);
-        DWORD beg1 = GetTickCount(); 
-        while(dwFileSize<TEST_BYTE)
-        {
-            Rand = rand();
-            WriteFile(hFile, &Rand,sizeof(Rand),&dwTemp, NULL);
-            dwFileSize = GetFileSize(hFile, NULL);
-        }
-        CloseHandle(hFile);
-    DWORD beg2 = GetTickCount()-beg1; //определяем время считывания файла
-  
-printf("\nФайл в синхронном режиме записан за %d мс\n",beg2);
-}*/
