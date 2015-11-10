@@ -22,12 +22,13 @@ unsigned int    m_it_read_counter;
        char*    m_buf_null;      
 unsigned int    m_max_byte_file_size;
 
- const char*    m_filter;
+       char*    m_filter;
       size_t    m_size_filter;
 
         bool    ReadFileNextBuf( OVERLAPPED* ov);
 
   //Sedgewick RegExp 
+        bool    any_occurrence;
          int    m_line_counter;
          
          struct m_state_struct

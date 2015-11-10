@@ -67,8 +67,8 @@ int _tmain( int argc, _TCHAR* argv[] )
         //filter = "ÊÀÇÀÁ.ËÜÊÀ";
          //filter = "ÊÀÇÀÁÓËÜÊ*À";
         //filter = "ÊÀÇÀÁÓË.*ÜÊÀ";
-        filter = "ÊÀ*ÇÀÁÓË.*ÜÊÀ";
-        // filter = ".*.*ÊÀÇÀÁÓËÜÊÀ";
+        //filter = "ÊÀ*ÇÀÁÓË.*ÜÊÀ";
+         filter = ".*.*ÊÀÇÀÁÓËÜÊÀ";
     }
     printf("Áóäåò ïğîèçâåäåí ïîèñê %s â ôàéëå ", filter);
     _tcprintf( szFileName );
