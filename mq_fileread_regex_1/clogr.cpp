@@ -60,10 +60,34 @@ bool CLogReader::SetFilter( const char* filter )
     if( sizeof( filter[0] ) == 0 )
         return false;
     
-    m_size_filter = sizeof( filter ) / sizeof( filter[0] );
-    m_filter = new char[m_size_filter+1];
-    m_filter = filter;
+    m_size_filter = strlen(filter); // sizeof( filter ) / sizeof( filter[0] );
     
+    if( filter[0] == '.' && ( filter[1] == '*' || filter[1] == '+') )
+    {
+        any_occurrence = true;
+        int it_start_char_filter = 2;
+        for( it_start_char_filter = 2; it_start_char_filter < m_size_filter; ++it_start_char_filter )
+        {
+            if(    filter[it_start_char_filter] == '.' 
+                || filter[it_start_char_filter] == '*'
+                || filter[it_start_char_filter] == '?'
+                || filter[it_start_char_filter] == '+' )
+            { continue; }
+            else { break; }
+        }
+        
+        m_filter = new char[m_size_filter+1-it_start_char_filter];
+        strncpy(m_filter, filter+it_start_char_filter,  (m_size_filter+1-it_start_char_filter));
+        m_filter[m_size_filter-it_start_char_filter] = '\0';
+    }
+    else
+    {
+         m_filter = new char[m_size_filter+10];
+         strncpy(m_filter, filter, m_size_filter);
+         m_filter[m_size_filter] = '\0';
+         // m_filter = filter;
+         any_occurrence = false;
+    }
     //Sedgewick RegExp 
     compile( m_filter );
     
@@ -292,7 +316,7 @@ unsigned CLogReader::list()
         }
 		if( aut_state[state_1].next2 == state_2 || aut_state[state_1].next2 == 0 )
         { 
-                aut_state[state_1].next2 = state_3;
+            aut_state[state_1].next2 = state_3;
         }
 		return state_3;
 	}
@@ -421,8 +445,8 @@ int CLogReader::SearchInLine( const char *text_line, unsigned start )
     int last_match  =  0;
     for( int n = start; n < text_char_size; n++ )
     {
-		if( aut_state[1].char_state == '.' && aut_state[2].char_state == '*' && n > 0)
-            break; //если в начале любое количество любых символов, нет смысла проходить и искать вхождение 
+        if( !any_occurrence && n > 0)
+            break; 
         last_match  = simulate( text_line, n );
         if( last_match > ( n -1 ) ) 
         {
@@ -446,7 +470,7 @@ int CLogReader::simulate( const char *str, int j )
     m_deque.put( next_char );
     
     int last_match = j - 1;
-	size_t len = strlen( str );
+	size_t len = strlen( str )-1;
 	do 
     {
 		if( m_state_counter == next_char ) 
@@ -515,9 +539,7 @@ int CLogReader::simulate( const char *str, int j )
         
 		if( m_state_counter == 0 ) 
         {
-			last_match = j - 1;
-			/*while( !m_deque.isEmpty())
-                m_state_counter = m_deque.pop();*/
+			 last_match = j - 1;
              m_deque.Clean();
 		}
 	} 
