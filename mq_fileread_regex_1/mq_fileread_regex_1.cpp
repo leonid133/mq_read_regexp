@@ -3,9 +3,21 @@
 #include "stdafx.h"
 #include "clogr.h"
 
+#ifdef _DEBUG
+#include <crtdbg.h>
+#define _CRTDBG_MAP_ALLOC
+#define new new( _NORMAL_BLOCK, __FILE__, __LINE__)
+
+#endif
+
 int _tmain( int argc, _TCHAR* argv[] )
 {
+     _CrtMemState _ms;
+    _CrtMemCheckpoint(&_ms);
+   // _CrtSetReportMode( _CRT_WARN, _CRTDBG_MODE_FILE );
+
     setlocale( LC_CTYPE, "Russian" );
+
 
     char *filter;
     TCHAR *szFileName;
@@ -45,14 +57,14 @@ int _tmain( int argc, _TCHAR* argv[] )
         filter = new char[100];
         //filter = "**ОЛГ?Р**";
         // filter = "*ОЛГАР*";
-        //filter = "БОЛГАР";
-        // filter = "ЗАКРЫВАШКИ";
+        //filter = ".*БОЛГАР";
+         //filter = ".*ЗАКРЫВАШКИ";
         //filter = "(ОТК|ЗАК)РЫВ*АШКИ";
-        //filter = "ПЕЧ*НЬКА";
+        //filter = ".*ПЕЧЕНЬКА";
         //filter = "П*ЕЧЕНЬКА";
        // filter = "*ЕЧЕ*Н*К*";
         //filter = "ПЕЧЕ*НЬКА";
-        // filter = "ПЕЧЕ+НЬКА";
+         //filter = ".*ПЕЧЕ+НЬКА";
         //filter = "П?Е+Ч(Е?|Е+)НЬ*КА";
         //filter = "П?ЕЧЕНЬ*КА";
         // filter = "ПЕЧЕНЬ*КА";
@@ -62,55 +74,63 @@ int _tmain( int argc, _TCHAR* argv[] )
         //filter = "П?ЧЕ+Н+ЬКА";
         //filter = "П?ЧЕ+Н*ЬКА";
          // filter = "ПЕ*ЧЕНЬКА";
-        //filter = "КА+ЗАБ?УЛ.*ЬК*А";
+        filter = "КА+ЗАБ?УЛ.*ЬК*А";
          //filter = "КАЗАБ?ЛЬКА";
         //filter = "КАЗАБ.ЛЬКА";
          //filter = "КАЗАБУЛЬК*А";
         //filter = "КАЗАБУЛ.*ЬКА";
-        //filter = "КА*ЗАБУЛ.*ЬКА";
-         filter = ".*.*КАЗАБУЛЬКА";
+        //filter = ".*КА*ЗАБУЛ.*ЬКА";
+        // filter = ".*.*КАЗАБУЛЬКА";
     }
     printf("Будет произведен поиск %s в файле ", filter);
     _tcprintf( szFileName );
     printf(". Для продолжения нажмите любую клавишу\n");
     _getch();
     int buf_result_size = 150;
-   
-    CLogReader regexp_reader;
-    DWORD tick_start_open = GetTickCount();
-    if(!regexp_reader.Open(szFileName))
     {
-        std::cerr << "Не удалось открыть файл " << szFileName;
-        return 1;
-    }
-    DWORD tick_end_open = GetTickCount();
-    DWORD tick_start_regex = GetTickCount();
+        CLogReader regexp_reader;
+        DWORD tick_start_open = GetTickCount();
+        if(!regexp_reader.Open(szFileName))
+        {
+            std::cerr << "Не удалось открыть файл " << szFileName;
+            return 1;
+        }
+        DWORD tick_end_open = GetTickCount();
+        DWORD tick_start_regex = GetTickCount();
 
-    if( !regexp_reader.SetFilter(filter) )
-    {
-        std::cerr << "Не удалось установить фильтр " << filter;
-        return 1;
-    }
-    char* buf = new char[buf_result_size+1];
+        if( !regexp_reader.SetFilter(filter) )
+        {
+            std::cerr << "Не удалось установить фильтр " << filter;
+            return 1;
+        }
+        char* buf = new char[buf_result_size+1];
  
-    int find_counter = 0;
-    while(regexp_reader.GetNextLine(buf, buf_result_size))
-    {
-        DWORD tick_print_start_ = GetTickCount();
-        printf( "\n %s \n ", buf );
-        DWORD tick_print_end_ = GetTickCount();
-        find_counter++;
-        tick_start_regex = tick_start_regex + (tick_print_end_ - tick_print_start_);
+        int find_counter = 0;
+        while(regexp_reader.GetNextLine(buf, buf_result_size))
+        {
+            DWORD tick_print_start_ = GetTickCount();
+            printf( "\n %s \n ", buf );
+            DWORD tick_print_end_ = GetTickCount();
+            find_counter++;
+            tick_start_regex = tick_start_regex + (tick_print_end_ - tick_print_start_);
+        
+        }
+        DWORD tick_end = GetTickCount();
+        regexp_reader.Close();
+        delete buf;
+    
+        printf( "\nФайл открыт за %d мс\n", tick_end_open-tick_start_open );
+        printf( "\nПоиск произведен за %d мс\n", tick_end-tick_start_regex );
+        printf( "\nРегулярное выражение %s \n", filter );
+        printf( "\nНайдено %d строчек\n", find_counter );
+        printf( "\nНажмите любую клавишу, для завершения программы\n");
     }
-    DWORD tick_end = GetTickCount();
-    regexp_reader.Close();
+    
 
-    printf( "\nФайл открыт за %d мс\n", tick_end_open-tick_start_open );
-    printf( "\nПоиск произведен за %d мс\n", tick_end-tick_start_regex );
-    printf( "\nРегулярное выражение %s \n", filter );
-    printf( "\nНайдено %d строчек\n", find_counter );
-    printf( "\nНажмите любую клавишу, для завершения программы\n");
+    _CrtMemDumpAllObjectsSince(&_ms);
+    _CrtDumpMemoryLeaks();
     _getch();
-	
+	 
     return 0;
+   
 }

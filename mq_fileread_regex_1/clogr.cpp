@@ -15,6 +15,8 @@ CLogReader::CLogReader()
         m_buf_null[it_buf] = '\0';  
     }
     
+    buffer_empty = true;
+
     //Sedgewick RegExp 
     aut_state[0].next1 = 0;
 	aut_state[0].next2 = 0;
@@ -24,6 +26,8 @@ CLogReader::~CLogReader()
 {
    VirtualFree( m_read_mem_buf, 0, MEM_RELEASE );
    VirtualFree( m_work_mem_buf, 0, MEM_RELEASE );
+   delete m_filter;
+   delete m_buf_null;
 }
 
 bool CLogReader::Open( const TCHAR file_name[100] )
@@ -36,16 +40,18 @@ bool CLogReader::Open( const TCHAR file_name[100] )
     m_line_counter = 0;
     m_it_read_counter = 0;
 
-    m_read_mem_buf = VirtualAlloc( NULL, (m_virt_buff_size + 16), MEM_COMMIT, PAGE_READWRITE );
+    m_read_mem_buf = VirtualAlloc( NULL, (m_virt_buff_size ), MEM_COMMIT, PAGE_READWRITE );
     if(m_read_mem_buf == NULL)
         return false;
     
-    m_work_mem_buf = VirtualAlloc( NULL, ( m_virt_buff_size*2 + 32 ), MEM_COMMIT, PAGE_READWRITE );
+    m_work_mem_buf = VirtualAlloc( NULL, ( m_virt_buff_size*2 ), MEM_COMMIT, PAGE_READWRITE );
     if( m_work_mem_buf == NULL )
         return false;
 
     char* buf_work_text = reinterpret_cast<char*>( m_work_mem_buf );
     CopyMemory(buf_work_text , m_buf_null, ( m_virt_buff_size*2 ) );
+
+    readed_data = 0;
 
     return true;
 }
@@ -82,7 +88,7 @@ bool CLogReader::SetFilter( const char* filter )
     }
     else
     {
-         m_filter = new char[m_size_filter+10];
+         m_filter = new char[m_size_filter+1];
          strncpy(m_filter, filter, m_size_filter);
          m_filter[m_size_filter] = '\0';
          // m_filter = filter;
@@ -96,6 +102,7 @@ bool CLogReader::SetFilter( const char* filter )
 
 bool CLogReader::ReadFileNextBuf( OVERLAPPED* ov)
 {
+    CopyMemory( m_read_mem_buf, m_buf_null, m_virt_buff_size );
     ReadFile( m_h_file_, (LPVOID)m_read_mem_buf, m_virt_buff_size, NULL, ov);
     DWORD error = GetLastError();      
     WaitForSingleObject( m_h_file_, INFINITE );   
@@ -115,37 +122,45 @@ bool CLogReader::ReadFileNextBuf( OVERLAPPED* ov)
 
 bool CLogReader::GetNextLine( char* buf, const int bufsize )
 {
+    CopyMemory( buf , m_buf_null, bufsize );
+
     OVERLAPPED ov = { 0, 0, 0, 0, NULL};
 
     char* buf_work_text = reinterpret_cast<char*>( m_work_mem_buf );
     
     ov.Offset = m_line_counter;
-
+    
     while( ov.Offset < m_file_size 
         || m_it_read_counter < ( m_virt_buff_size*2 ) )
     {
-        if( ( m_it_read_counter >= m_virt_buff_size 
-           || 0 == m_it_read_counter )
-           && ov.Offset < m_file_size )
+        if( buffer_empty
+         || ( m_it_read_counter >= m_virt_buff_size && ov.Offset < m_file_size) 
+         || ( m_it_read_counter == 0                && ov.Offset < m_file_size ) )
         {
             if( !ReadFileNextBuf( &ov ) )
             {
                 return false;
             }
+            
             CopyMemory( ( buf_work_text + m_virt_buff_size ), m_read_mem_buf, m_virt_buff_size );
+            buffer_empty = false;
+
             ov.Offset += m_virt_buff_size;
             m_line_counter = ov.Offset;
-            m_it_read_counter = 0;
+            
         }
         
-        int bufsize_line = 0;
+        
         bool not_ended_line = false;
         
+        int bufsize_line = 0;
+    
         while( m_it_read_counter < m_virt_buff_size 
-           ||( m_it_read_counter < ( m_virt_buff_size*2 ) && ( not_ended_line || (m_line_counter > m_file_size) ) ) )
+           ||( m_it_read_counter < ( m_virt_buff_size*2 ) && ( not_ended_line 
+           /*|| (m_line_counter >= m_file_size) */ ) ) )
 		{
             
-            for( bufsize_line = 0; ( bufsize_line < (bufsize-1) ) && ( bufsize_line < ( m_virt_buff_size*2 ) ); bufsize_line )
+            for( bufsize_line = 0; ( bufsize_line < (bufsize-1) ) && ( bufsize_line < ( m_virt_buff_size ) ); bufsize_line )
 		    {
                 if( '\n' == buf_work_text[bufsize_line + m_it_read_counter]
                  || '\0' == buf_work_text[bufsize_line + m_it_read_counter] )
@@ -159,28 +174,34 @@ bool CLogReader::GetNextLine( char* buf, const int bufsize )
                    not_ended_line = true; 
                 ++bufsize_line;
 		    }
-            /* //DEBUG
-           if(bufsize_line>1)
-             {
-                //printf("debug %s", m_it_read_counter);
-                char* debug_buf = new char[32];
-                itoa(m_it_read_counter, debug_buf, 10);
-                CopyMemory( buf_work_text + ( m_virt_buff_size*2 ) + 1 , debug_buf , 31 );
-             }
-           */
-                
-            CopyMemory( buf , m_buf_null, bufsize );
+            
+            if( ( m_it_read_counter  + bufsize_line) > m_virt_buff_size )
+            {
+                readed_data = ( m_it_read_counter  + bufsize_line) - m_virt_buff_size;
+            }
+
+            CopyMemory( buf, m_buf_null, bufsize );
             CopyMemory( buf , ( buf_work_text + m_it_read_counter ), bufsize_line );
-        
+            
             m_it_read_counter += bufsize_line;
 
-		    int n = SearchInLine( buf );
+		    int n = SearchInLine( &buf );
 	        if( n >= 0 )
 		        return true;
         }
         CopyMemory( buf_work_text, m_read_mem_buf, m_virt_buff_size );
-        if( m_line_counter < m_file_size )
-            m_it_read_counter = 0;
+
+        if( m_line_counter <= m_file_size )
+        {
+            m_it_read_counter = readed_data;
+            readed_data = 0;
+            buffer_empty = true;
+        }
+        else
+        {
+            return false;
+        }
+  
     }   
      
     return false;
@@ -246,6 +267,14 @@ void CLogReader::Deque::Clean()
 {
     while( !isEmpty())
         pop();
+    /*
+    while( head ) 
+    {
+		tail = head;
+		head = head->next;
+		delete tail;
+	}
+    */
 }
 
 // RegExpr
@@ -275,7 +304,7 @@ inline int CLogReader::isLetter( char input_char )
           ? 1 : 0 );
 }
 
-void CLogReader::compile( const char *regex )
+void CLogReader::compile( char *regex )
 {
    	m_regex_pattenn = regex;
 
@@ -433,7 +462,7 @@ unsigned CLogReader::v()
 	return state_1;
 }
 
-int CLogReader::SearchInLine( const char *text_line, unsigned start )
+int CLogReader::SearchInLine( char **text_line, unsigned start )
 {
 	if(start > 0 )
         printf("Агааа");
@@ -441,7 +470,7 @@ int CLogReader::SearchInLine( const char *text_line, unsigned start )
 		return REGEXPR_NOT_COMPILED;
 
     int text_char_size;
-    text_char_size = strlen( text_line );
+    text_char_size = strlen( *text_line );
     int last_match  =  0;
     for( int n = start; n < text_char_size; n++ )
     {
@@ -452,15 +481,13 @@ int CLogReader::SearchInLine( const char *text_line, unsigned start )
         {
 			return n;
 		}
-        //else if( m == -2 )
-          //  return REGEXPR_NOT_FOUND;
 	}
     
 	return REGEXPR_NOT_FOUND;
 }
 
 #define next_char	-1
-int CLogReader::simulate( const char *str, int j )
+int CLogReader::simulate( char **str, int j )
 {
 	m_deque.Clean();
     m_state_counter = aut_state[0].next1;
@@ -470,13 +497,13 @@ int CLogReader::simulate( const char *str, int j )
     m_deque.put( next_char );
     
     int last_match = j - 1;
-	size_t len = strlen( str )-1;
+	size_t len = strlen( *str )-1;
 	do 
     {
 		if( m_state_counter == next_char ) 
         {
                 m_deque.put(next_char);
-                if(str[j] && j < len)
+                if(str[0][j] && j < len)
 				    j++;
                 else
                 {
@@ -486,10 +513,10 @@ int CLogReader::simulate( const char *str, int j )
             
 		} 
 
-        if( m_state_counter>(MAXSTATES-1) )
+        if( m_state_counter>(MAXSTATES-1) || m_state_counter < ( -1 ) )
         {
-            //printf("");
-            m_deque.Clean();
+           if( !m_deque.isEmpty() )
+                m_state_counter = m_deque.pop();
             break; 
         }
         if( aut_state[m_state_counter].char_state == '.' ) 
@@ -497,14 +524,8 @@ int CLogReader::simulate( const char *str, int j )
 			m_deque.put( aut_state[m_state_counter].next1 );
 			if( aut_state[m_state_counter].next1 != aut_state[m_state_counter].next2 )
 				m_deque.put( aut_state[m_state_counter].next2 );
-            /*
-            if( m_state_counter == 1 && aut_state[m_state_counter+1].char_state == '*' && last_match > 1 )
-            {
-                m_deque.Clean();
-                break; //бессмысленные проходы 
-            }*/
 		} 
-        else if( !aut_state[m_state_counter].char_state ) 
+        else if( next_char != m_state_counter && !aut_state[m_state_counter].char_state  ) 
         {
 			m_deque.push( aut_state[m_state_counter].next1 );
 			if( aut_state[m_state_counter].next1 != aut_state[m_state_counter].next2 )
@@ -528,7 +549,7 @@ int CLogReader::simulate( const char *str, int j )
 				m_deque.push( aut_state[m_state_counter].next2 );
             }
 		}
-        else if( aut_state[m_state_counter].char_state == str[j] ) 
+        else if( aut_state[m_state_counter].char_state == str[0][j] ) 
         {
 			m_deque.put( aut_state[m_state_counter].next1 );
 			if( aut_state[m_state_counter].next1 != aut_state[m_state_counter].next2 )
@@ -540,7 +561,8 @@ int CLogReader::simulate( const char *str, int j )
 		if( m_state_counter == 0 ) 
         {
 			 last_match = j - 1;
-             m_deque.Clean();
+             if( !m_deque.isEmpty() )
+                m_state_counter = m_deque.pop();
 		}
 	} 
     while( j <= len && !m_deque.isEmpty() );
