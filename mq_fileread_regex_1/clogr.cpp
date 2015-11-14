@@ -26,8 +26,8 @@ CLogReader::~CLogReader()
 {
    VirtualFree( m_read_mem_buf, 0, MEM_RELEASE );
    VirtualFree( m_work_mem_buf, 0, MEM_RELEASE );
-   delete m_filter;
-   delete m_buf_null;
+   delete[] m_filter;
+   delete[] m_buf_null;
 }
 
 bool CLogReader::Open( const TCHAR file_name[100] )
