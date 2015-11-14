@@ -27,6 +27,8 @@ unsigned int    m_max_byte_file_size;
 
         bool    ReadFileNextBuf( OVERLAPPED* ov);
 
+         int    readed_data;
+        bool    buffer_empty;
   //Sedgewick RegExp 
         bool    any_occurrence;
          int    m_line_counter;
@@ -39,8 +41,8 @@ unsigned int    m_max_byte_file_size;
          } aut_state[MAXSTATES];
 
         void    clear_aut_state();
-        void    compile(const char *pattern);
-	     int    SearchInLine(const char *str, unsigned start = 0); 
+        void    compile(char *pattern);
+	     int    SearchInLine( char **str, unsigned start = 0); 
          //const char *operator = (const char *pattern);
 
         class   Deque
@@ -77,7 +79,7 @@ unsigned int    m_regex_char_counter;
 		 int    isLetter(char c);
 
 		// aut_state simulation
-		 int    simulate( const char *str, int j );
+		 int    simulate( char **str, int j );
 
 public:
                 CLogReader();
