@@ -74,12 +74,13 @@ int _tmain( int argc, _TCHAR* argv[] )
         //filter = "Ï?×Å+Í+ÜÊÀ";
         //filter = "Ï?×Å+Í*ÜÊÀ";
          // filter = "ÏÅ*×ÅÍÜÊÀ";
-        filter = "ÊÀ+ÇÀÁ?ÓË.*ÜÊ*À";
+        //filter = "ÊÀ+ÇÀÁ?ÓË.*ÜÊ*À";
          //filter = "ÊÀÇÀÁ?ËÜÊÀ";
         //filter = "ÊÀÇÀÁ.ËÜÊÀ";
          //filter = "ÊÀÇÀÁÓËÜÊ*À";
         //filter = "ÊÀÇÀÁÓË.*ÜÊÀ";
         //filter = ".*ÊÀ*ÇÀÁÓË.*ÜÊÀ";
+        filter = "ÊÀ*ÇÀÁÓË.*ÜÊÀ";
         // filter = ".*.*ÊÀÇÀÁÓËÜÊÀ";
     }
     printf("Áóäåò ïğîèçâåäåí ïîèñê %s â ôàéëå ", filter);
@@ -106,7 +107,7 @@ int _tmain( int argc, _TCHAR* argv[] )
         char* buf = new char[buf_result_size+1];
  
         int find_counter = 0;
-        while(regexp_reader.GetNextLine(buf, buf_result_size))
+        while( regexp_reader.GetNextLine( buf, buf_result_size ) )
         {
             DWORD tick_print_start_ = GetTickCount();
             printf( "\n %s \n ", buf );

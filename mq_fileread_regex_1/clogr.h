@@ -35,35 +35,35 @@ unsigned int    m_max_byte_file_size;
          
          struct m_state_struct
          {
-	         char char_state;
-	         unsigned next1;
+             char char_state;
+             unsigned next1;
              unsigned next2;
          } aut_state[MAXSTATES];
 
         void    clear_aut_state();
-        void    compile(char *pattern);
-	     int    SearchInLine( char **str, unsigned start = 0); 
+        void    compile(const char * pattern);
+         int    SearchInLine( const char * str, unsigned start = 0); 
          //const char *operator = (const char *pattern);
 
         class   Deque
         {
-	        public:
-		        Deque();
-		        ~Deque();
+            public:
+                Deque();
+                ~Deque();
 
-		        void push(int n);
-		        void put(int n);
-		        int pop();
+                void push(int n);
+                void put(int n);
+                int pop();
 
-		        int isEmpty();
+                int isEmpty();
                 void Clean();
 
-	        protected:
-		        struct Element 
+            protected:
+                struct Element 
                 {
-			        int n;
-			        Element *next;
-		        } *head, *tail;
+                    int n;
+                    Element *next;
+                } *head, *tail;
         } m_deque;
 
       // compiler
@@ -72,22 +72,22 @@ unsigned int    m_regex_char_counter;
          int    m_state_counter;
   const char    *m_regex_pattenn;
 
-	unsigned    list();
-	unsigned    element();
-	unsigned    v();
+    unsigned    list();
+    unsigned    element();
+    unsigned    v();
 
-		 int    isLetter(char c);
+         int    isLetter(char c);
 
-		// aut_state simulation
-		 int    simulate( char **str, int j );
+        // aut_state simulation
+         int    simulate( const char const *& str, int j );
 
 public:
                 CLogReader();
                ~CLogReader();
         bool    Open( const TCHAR szFileName[100] );   // открытие файла, false - ошибка
         void    Close();                         // закрытие файла
-        bool    SetFilter(const char *filter);   // установка фильтра строк, false - ошибка
-        bool    GetNextLine(char *buf,           // запрос очередной найденной строки, 
+        bool    SetFilter( char * filter);   // установка фильтра строк, false - ошибка
+        bool    GetNextLine( char *& buf,           // запрос очередной найденной строки, 
                            const int bufsize);  // buf - буфер, bufsize - максимальная длина
                                                 // false - конец файла или ошибка
   };
